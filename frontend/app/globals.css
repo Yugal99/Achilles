@@ -1,0 +1,168 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-cinzel), ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-critical: var(--critical);
+  --color-high: var(--high);
+  --color-medium: var(--medium);
+  --color-low: var(--low);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+:root {
+  color-scheme: dark;
+  --radius: 0.5rem;
+  --background: oklch(0.13 0.004 60);
+  --foreground: oklch(0.93 0.025 85);
+  --card: oklch(0.165 0.006 60);
+  --card-foreground: oklch(0.93 0.025 85);
+  --popover: oklch(0.165 0.006 60);
+  --popover-foreground: oklch(0.93 0.025 85);
+  --primary: oklch(0.78 0.12 82);
+  --primary-foreground: oklch(0.16 0.01 60);
+  --secondary: oklch(0.2 0.008 60);
+  --secondary-foreground: oklch(0.93 0.025 85);
+  --muted: oklch(0.2 0.008 60);
+  --muted-foreground: oklch(0.7 0.02 80);
+  --accent: oklch(0.22 0.02 75);
+  --accent-foreground: oklch(0.93 0.025 85);
+  --destructive: oklch(0.64 0.17 32);
+  --border: oklch(0.78 0.12 82 / 16%);
+  --input: oklch(0.78 0.12 82 / 22%);
+  --ring: oklch(0.78 0.12 82 / 60%);
+  --gold: oklch(0.78 0.12 82);
+  --gold-soft: oklch(0.78 0.12 82 / 12%);
+  --critical: oklch(0.64 0.17 32);
+  --high: oklch(0.72 0.14 55);
+  --medium: oklch(0.82 0.11 90);
+  --low: oklch(0.72 0.03 230);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+  ::selection {
+    background: oklch(0.78 0.12 82 / 35%);
+  }
+}
+
+@utility text-gold-gradient {
+  background-image: linear-gradient(
+    100deg,
+    oklch(0.86 0.1 88) 0%,
+    oklch(0.72 0.13 75) 45%,
+    oklch(0.9 0.08 90) 70%,
+    oklch(0.7 0.12 72) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 8s ease-in-out infinite;
+}
+
+@utility greek-rule {
+  height: 10px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='10' viewBox='0 0 20 10'%3E%3Cpath d='M0 9h4V3h8v4H8V5' fill='none' stroke='%23c9a54c' stroke-width='1' opacity='0.55'/%3E%3Cpath d='M12 9h8' stroke='%23c9a54c' stroke-width='1' opacity='0.55'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+}
+
+@keyframes shimmer {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ember {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-120px);
+    opacity: 0;
+  }
+}
+
+@keyframes sweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.animate-ember {
+  animation: ember 6s linear infinite;
+}
+
+.animate-sweep {
+  animation: sweep 4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-ember,
+  .animate-sweep,
+  .text-gold-gradient {
+    animation: none !important;
+  }
+}
