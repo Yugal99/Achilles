@@ -1,0 +1,20 @@
+id: achilles-vite-dev-server
+info:
+  name: Vite development server exposed
+  author: achilles
+  severity: high
+  description: The app is served by the Vite dev server, which is not meant for production and can serve source files and environment values.
+  remediation: Run `vite build` and deploy the dist/ folder (or use your host's build step) instead of `vite dev`.
+  tags: achilles,exposure,debug,config
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/@vite/client"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words: ["HMRContext", "vite"]
+        condition: and

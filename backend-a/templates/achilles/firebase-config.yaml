@@ -1,0 +1,22 @@
+id: achilles-firebase-init
+info:
+  name: Firebase project config (informational)
+  author: achilles
+  severity: info
+  description: The site is hosted on Firebase and its project config is public (normal). Your data is only as safe as your Firestore/Realtime Database Security Rules.
+  remediation: Review Firestore and Realtime Database rules; never use "allow read, write: if true".
+  tags: achilles,firebase,config,tech
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/__/firebase/init.json"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        words: ['"projectId"']
+    extractors:
+      - type: regex
+        group: 1
+        regex: ['"projectId":\s*"([^"]+)"']

@@ -1,0 +1,19 @@
+id: achilles-exposed-git
+info:
+  name: Exposed .git directory
+  author: achilles
+  severity: high
+  description: The .git folder is public, so anyone can rebuild the source code and its history (including old secrets).
+  remediation: Block /.git in the web server or stop deploying the .git directory.
+  tags: achilles,exposure,git,config
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/.git/config"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words: ["[core]"]

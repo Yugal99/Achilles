@@ -1,0 +1,476 @@
+{
+  "$defs": {
+    "Category": {
+      "enum": [
+        "exposed_secret",
+        "exposed_file",
+        "open_port",
+        "tls",
+        "headers",
+        "cors",
+        "misconfig",
+        "vulnerability",
+        "tech"
+      ],
+      "title": "Category",
+      "type": "string"
+    },
+    "Finding": {
+      "properties": {
+        "id": {
+          "description": "Stable hash of tool+check_id+location; same issue => same id across rescans",
+          "title": "Id",
+          "type": "string"
+        },
+        "tool": {
+          "description": "nmap | httpx | nuclei | testssl | jscheck",
+          "title": "Tool",
+          "type": "string"
+        },
+        "check_id": {
+          "description": "Tool-specific check name, e.g. nuclei template id",
+          "title": "Check Id",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "category": {
+          "$ref": "#/$defs/Category"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "location": {
+          "default": "",
+          "description": "URL, host:port, or file where it was seen",
+          "title": "Location",
+          "type": "string"
+        },
+        "evidence": {
+          "default": "",
+          "description": "Short proof. Secrets are always masked.",
+          "title": "Evidence",
+          "type": "string"
+        },
+        "remediation": {
+          "default": "",
+          "title": "Remediation",
+          "type": "string"
+        },
+        "references": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "References",
+          "type": "array"
+        },
+        "tags": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "tool",
+        "check_id",
+        "title",
+        "severity",
+        "category"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "ScanStatus": {
+      "enum": [
+        "queued",
+        "running",
+        "completed",
+        "partial",
+        "failed",
+        "cancelled"
+      ],
+      "title": "ScanStatus",
+      "type": "string"
+    },
+    "Severity": {
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low",
+        "info"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "Stack": {
+      "properties": {
+        "technologies": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Technologies",
+          "type": "array"
+        },
+        "webserver": {
+          "default": "",
+          "title": "Webserver",
+          "type": "string"
+        },
+        "title": {
+          "default": "",
+          "title": "Title",
+          "type": "string"
+        },
+        "status_code": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Code"
+        },
+        "final_url": {
+          "default": "",
+          "title": "Final Url",
+          "type": "string"
+        },
+        "content_type": {
+          "default": "",
+          "title": "Content Type",
+          "type": "string"
+        },
+        "cdn": {
+          "default": "",
+          "title": "Cdn",
+          "type": "string"
+        }
+      },
+      "title": "Stack",
+      "type": "object"
+    },
+    "Summary": {
+      "properties": {
+        "total": {
+          "default": 0,
+          "title": "Total",
+          "type": "integer"
+        },
+        "by_severity": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "default": {
+            "critical": 0,
+            "high": 0,
+            "medium": 0,
+            "low": 0,
+            "info": 0
+          },
+          "title": "By Severity",
+          "type": "object"
+        },
+        "by_category": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "default": {},
+          "title": "By Category",
+          "type": "object"
+        },
+        "risk_score": {
+          "default": 0,
+          "description": "0 (clean) .. 100 (on fire). Weighted by severity, capped.",
+          "title": "Risk Score",
+          "type": "integer"
+        },
+        "grade": {
+          "default": "A",
+          "description": "A..F derived from risk_score",
+          "title": "Grade",
+          "type": "string"
+        }
+      },
+      "title": "Summary",
+      "type": "object"
+    },
+    "Target": {
+      "properties": {
+        "input": {
+          "title": "Input",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        },
+        "scheme": {
+          "title": "Scheme",
+          "type": "string"
+        },
+        "host": {
+          "title": "Host",
+          "type": "string"
+        },
+        "port": {
+          "title": "Port",
+          "type": "integer"
+        },
+        "ips": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Ips",
+          "type": "array"
+        }
+      },
+      "required": [
+        "input",
+        "url",
+        "scheme",
+        "host",
+        "port"
+      ],
+      "title": "Target",
+      "type": "object"
+    },
+    "ToolRun": {
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/ToolStatus",
+          "default": "pending"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finished At"
+        },
+        "duration_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration S"
+        },
+        "timeout_s": {
+          "default": 0,
+          "title": "Timeout S",
+          "type": "integer"
+        },
+        "findings_count": {
+          "default": 0,
+          "title": "Findings Count",
+          "type": "integer"
+        },
+        "message": {
+          "default": "",
+          "title": "Message",
+          "type": "string"
+        },
+        "command": {
+          "default": "",
+          "title": "Command",
+          "type": "string"
+        }
+      },
+      "title": "ToolRun",
+      "type": "object"
+    },
+    "ToolStatus": {
+      "enum": [
+        "pending",
+        "running",
+        "ok",
+        "timeout",
+        "error",
+        "skipped",
+        "not_installed"
+      ],
+      "title": "ToolStatus",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "scan_id": {
+      "title": "Scan Id",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ScanStatus",
+      "default": "queued"
+    },
+    "profile": {
+      "title": "Profile",
+      "type": "string"
+    },
+    "target": {
+      "$ref": "#/$defs/Target"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "started_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Started At"
+    },
+    "finished_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Finished At"
+    },
+    "duration_s": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Duration S"
+    },
+    "queue_position": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Queue Position"
+    },
+    "progress": {
+      "default": 0,
+      "description": "0..100, share of tools finished",
+      "title": "Progress",
+      "type": "integer"
+    },
+    "tools": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ToolRun"
+      },
+      "default": {},
+      "title": "Tools",
+      "type": "object"
+    },
+    "stack": {
+      "$ref": "#/$defs/Stack",
+      "default": {
+        "technologies": [],
+        "webserver": "",
+        "title": "",
+        "status_code": null,
+        "final_url": "",
+        "content_type": "",
+        "cdn": ""
+      }
+    },
+    "findings": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Finding"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "summary": {
+      "$ref": "#/$defs/Summary",
+      "default": {
+        "total": 0,
+        "by_severity": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0
+        },
+        "by_category": {},
+        "risk_score": 0,
+        "grade": "A"
+      }
+    },
+    "error": {
+      "default": "",
+      "title": "Error",
+      "type": "string"
+    }
+  },
+  "required": [
+    "scan_id",
+    "profile",
+    "target"
+  ],
+  "title": "ScanResult",
+  "type": "object"
+}

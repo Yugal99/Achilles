@@ -1,0 +1,438 @@
+{
+  "schema_version": "1.0",
+  "scan_id": "scn_b9b67716f314",
+  "status": "completed",
+  "profile": "demo",
+  "target": {
+    "input": "http://127.0.0.1:8088",
+    "url": "http://127.0.0.1:8088/",
+    "scheme": "http",
+    "host": "127.0.0.1",
+    "port": 8088,
+    "ips": [
+      "127.0.0.1"
+    ]
+  },
+  "created_at": "2026-11-14T21:17:04.699894Z",
+  "started_at": "2026-11-14T21:17:04.700451Z",
+  "finished_at": "2026-11-14T21:17:16.988224Z",
+  "duration_s": 12.3,
+  "queue_position": null,
+  "progress": 100,
+  "tools": {
+    "nmap": {
+      "status": "ok",
+      "started_at": "2026-11-14T21:17:04.701600Z",
+      "finished_at": "2026-11-14T21:17:16.987245Z",
+      "duration_s": 12.3,
+      "timeout_s": 75,
+      "findings_count": 3,
+      "message": "3 open ports",
+      "command": "/usr/bin/nmap -Pn -sT -sV --version-light -T4 --max-retries 1 --host-timeout 70s --open -oX - -p 21,22,23,25,80,443,445,1433,1521,2375,2376,3000,3001,3306,4000,4200,5000,5001,5173,5432,5601,5984,6379,7474,8000,8080,8081,8443,8888,9000,9090,9200,9229,9300,11211,15672,27017,28017,50000,8088 127.0.0.1"
+    },
+    "httpx": {
+      "status": "ok",
+      "started_at": "2026-11-14T21:17:04.703323Z",
+      "finished_at": "2026-11-14T21:17:06.601180Z",
+      "duration_s": 1.9,
+      "timeout_s": 25,
+      "findings_count": 1,
+      "message": "Python:3.13.18",
+      "command": "/usr/bin/httpx-toolkit -u http://127.0.0.1:8088/ -json -silent -no-color -tech-detect -title -status-code -web-server -content-type -location -cdn -follow-redirects -timeout 10 -retries 1"
+    },
+    "nuclei": {
+      "status": "ok",
+      "started_at": "2026-11-14T21:17:04.705001Z",
+      "finished_at": "2026-11-14T21:17:04.917060Z",
+      "duration_s": 0.2,
+      "timeout_s": 100,
+      "findings_count": 0,
+      "message": "2 template matches",
+      "command": "/usr/bin/nuclei -u http://127.0.0.1:8088/ -jsonl -silent -no-color -disable-update-check -ni -or -rl 150 -c 25 -timeout 7 -retries 1 -etags intrusive,dos,fuzz,fuzzing,bruteforce,brute-force,osint,headless,rce,sqli,xss,lfi,ssrf,default-login -t /home/kali/achilles/backend-a/templates/achilles -tags achilles,exposure,config,misconfig,cors,debug,panel,token,keys,firebase,supabase,env,git,backup,logs -severity low,medium,high,critical"
+    },
+    "testssl": {
+      "status": "skipped",
+      "started_at": "2026-11-14T21:17:04.706809Z",
+      "finished_at": "2026-11-14T21:17:04.707906Z",
+      "duration_s": 0.0,
+      "timeout_s": 100,
+      "findings_count": 0,
+      "message": "target is http://, no TLS to test",
+      "command": ""
+    },
+    "jscheck": {
+      "status": "ok",
+      "started_at": "2026-11-14T21:17:04.711235Z",
+      "finished_at": "2026-11-14T21:17:04.816534Z",
+      "duration_s": 0.1,
+      "timeout_s": 60,
+      "findings_count": 17,
+      "message": "checked 2 scripts, 5 secrets",
+      "command": "builtin:jscheck"
+    }
+  },
+  "stack": {
+    "technologies": [
+      "Python:3.13.18"
+    ],
+    "webserver": "Express/4.18.2 Python/3.13.18",
+    "title": "TaskPilot (seeded test app)",
+    "status_code": 200,
+    "final_url": "http://127.0.0.1:8088/",
+    "content_type": "text/html",
+    "cdn": ""
+  },
+  "findings": [
+    {
+      "id": "f12584d7c3fc",
+      "tool": "jscheck",
+      "check_id": "exposed-env",
+      "title": ".env file is publicly downloadable",
+      "severity": "critical",
+      "category": "exposed_file",
+      "description": "Your .env usually holds database passwords and API keys.",
+      "location": "http://127.0.0.1:8088/.env",
+      "evidence": "HTTP 200, 293 bytes; variables: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, OPENAI_API_KEY",
+      "remediation": "Remove .env from the public/ or dist/ folder, add it to .gitignore, and rotate every secret it contained.",
+      "references": [],
+      "tags": []
+    },
+    {
+      "id": "175cd1f30e84",
+      "tool": "jscheck",
+      "check_id": "openai-key",
+      "title": "OpenAI API key in /.env",
+      "severity": "critical",
+      "category": "exposed_secret",
+      "description": "Anyone visiting the site can copy this key and run up your OpenAI bill.",
+      "location": "http://127.0.0.1:8088/.env",
+      "evidence": "sk-pro…stuv",
+      "remediation": "Revoke the key at platform.openai.com, move OpenAI calls to a server/edge function, read the key from a server-side env var.",
+      "references": [],
+      "tags": []
+    },
+    {
+      "id": "01f10f8668d3",
+      "tool": "jscheck",
+      "check_id": "openai-key",
+      "title": "OpenAI API key in client code",
+      "severity": "critical",
+      "category": "exposed_secret",
+      "description": "Anyone visiting the site can copy this key and run up your OpenAI bill.",
+      "location": "http://127.0.0.1:8088/assets/chat-def456.js",
+      "evidence": "sk-pro…stuv",
+      "remediation": "Revoke the key at platform.openai.com, move OpenAI calls to a server/edge function, read the key from a server-side env var.",
+      "references": [],
+      "tags": [
+        "secret",
+        "openai-key"
+      ]
+    },
+    {
+      "id": "e56218e3fac1",
+      "tool": "jscheck",
+      "check_id": "supabase-service-role",
+      "title": "Supabase service_role key in /.env",
+      "severity": "critical",
+      "category": "exposed_secret",
+      "description": "The service_role key bypasses Row Level Security: anyone can read, change or delete every row.",
+      "location": "http://127.0.0.1:8088/.env",
+      "evidence": "eyJhbG…pbmc",
+      "remediation": "Rotate the JWT secret / service key in Supabase now, use only the anon key in the browser, and do privileged work in an Edge Function.",
+      "references": [],
+      "tags": []
+    },
+    {
+      "id": "c21189c8e878",
+      "tool": "jscheck",
+      "check_id": "supabase-service-role",
+      "title": "Supabase service_role key in client code",
+      "severity": "critical",
+      "category": "exposed_secret",
+      "description": "The service_role key bypasses Row Level Security: anyone can read, change or delete every row.",
+      "location": "http://127.0.0.1:8088/assets/chat-def456.js",
+      "evidence": "eyJhbG…pbmc",
+      "remediation": "Rotate the JWT secret / service key in Supabase now, use only the anon key in the browser, and do privileged work in an Edge Function.",
+      "references": [],
+      "tags": [
+        "secret",
+        "supabase-service-role"
+      ]
+    },
+    {
+      "id": "9e4b61f15565",
+      "tool": "jscheck",
+      "check_id": "cors-reflect-credentials",
+      "title": "CORS reflects any origin with credentials",
+      "severity": "high",
+      "category": "cors",
+      "description": "Any website can make logged-in requests to your app and read the responses.",
+      "location": "http://127.0.0.1:8088/",
+      "evidence": "Origin: https://achilles-cors-probe.example -> ACAO: https://achilles-cors-probe.example, ACAC: true",
+      "remediation": "Only allow your own front-end origin(s); never echo the Origin header back.",
+      "references": [],
+      "tags": []
+    },
+    {
+      "id": "944ede723298",
+      "tool": "jscheck",
+      "check_id": "exposed-git",
+      "title": ".git folder is publicly downloadable",
+      "severity": "high",
+      "category": "exposed_file",
+      "description": "Attackers can rebuild your full source code and history, including old secrets.",
+      "location": "http://127.0.0.1:8088/.git/config",
+      "evidence": "HTTP 200, 98 bytes",
+      "remediation": "Block /.git in your web server or stop deploying the .git directory.",
+      "references": [],
+      "tags": []
+    },
+    {
+      "id": "fee7224bf8b7",
+      "tool": "jscheck",
+      "check_id": "cookie-flags-session_id",
+      "title": "Session cookie 'session_id' missing HttpOnly",
+      "severity": "medium",
+      "category": "headers",
+      "description": "Session cookies without HttpOnly can be stolen by XSS; without Secure they leak over HTTP.",
+      "location": "http://127.0.0.1:8088/",
+      "evidence": "Set-Cookie: session_id=…; missing HttpOnly",
+      "remediation": "Set cookies with `Secure; HttpOnly; SameSite=Lax`.",
+      "references": [],
+      "tags": [
+        "cookies"
+      ]
+    },
+    {
+      "id": "24c5df7f59e0",
+      "tool": "jscheck",
+      "check_id": "no-https",
+      "title": "Site is served over plain HTTP",
+      "severity": "medium",
+      "category": "tls",
+      "description": "Logins and data travel unencrypted.",
+      "location": "http://127.0.0.1:8088/",
+      "evidence": "",
+      "remediation": "Serve the site over HTTPS and redirect HTTP to HTTPS.",
+      "references": [],
+      "tags": []
+    },
+    {
+      "id": "22e6b04a0e37",
+      "tool": "jscheck",
+      "check_id": "exposed-sourcemap",
+      "title": "JavaScript source maps are public",
+      "severity": "low",
+      "category": "exposed_file",
+      "description": "Source maps hand out your original, readable source code (comments included).",
+      "location": "http://127.0.0.1:8088/assets/index-abc123.js.map",
+      "evidence": "",
+      "remediation": "Disable production source maps (e.g. `build.sourcemap: false` in Vite, `productionBrowserSourceMaps: false` in Next.js).",
+      "references": [],
+      "tags": []
+    },
+    {
+      "id": "723a6acfac54",
+      "tool": "jscheck",
+      "check_id": "missing-csp",
+      "title": "Missing Content-Security-Policy",
+      "severity": "low",
+      "category": "headers",
+      "description": "Without CSP, any XSS bug can load scripts from anywhere and steal sessions.",
+      "location": "http://127.0.0.1:8088/",
+      "evidence": "",
+      "remediation": "Add a Content-Security-Policy header (start with `default-src 'self'`).",
+      "references": [],
+      "tags": [
+        "headers"
+      ]
+    },
+    {
+      "id": "e1ed100274ff",
+      "tool": "jscheck",
+      "check_id": "missing-clickjacking-protection",
+      "title": "Page can be framed (clickjacking)",
+      "severity": "low",
+      "category": "headers",
+      "description": "Another site can embed your app in an invisible frame and trick users into clicking.",
+      "location": "http://127.0.0.1:8088/",
+      "evidence": "",
+      "remediation": "Add `X-Frame-Options: DENY` or CSP `frame-ancestors 'none'`.",
+      "references": [],
+      "tags": [
+        "headers"
+      ]
+    },
+    {
+      "id": "9d68c1633cc9",
+      "tool": "nmap",
+      "check_id": "open-port-8000",
+      "title": "Alternate HTTP port 8000 open",
+      "severity": "low",
+      "category": "open_port",
+      "description": "Often a dev server (Django/uvicorn) or admin panel.",
+      "location": "127.0.0.1:8000/tcp",
+      "evidence": "8000/tcp open http-alt",
+      "remediation": "Close port 8000 in your firewall / cloud security group, or bind the service to 127.0.0.1 or a private network. Only 80/443 should face the internet.",
+      "references": [],
+      "tags": [
+        "port",
+        "8000",
+        "http-alt"
+      ]
+    },
+    {
+      "id": "2e0b0650b981",
+      "tool": "nmap",
+      "check_id": "open-port-8443",
+      "title": "Unexpected open port 8443 (https-alt)",
+      "severity": "low",
+      "category": "open_port",
+      "description": "A service other than the website is reachable from the internet.",
+      "location": "127.0.0.1:8443/tcp",
+      "evidence": "8443/tcp open https-alt",
+      "remediation": "If this service isn't meant to be public, firewall it.",
+      "references": [],
+      "tags": [
+        "port",
+        "8443"
+      ]
+    },
+    {
+      "id": "9897917e0d40",
+      "tool": "jscheck",
+      "check_id": "supabase-anon-key",
+      "title": "Supabase anon key in client code",
+      "severity": "info",
+      "category": "exposed_secret",
+      "description": "Normal and public by design, but it means your data is only as safe as your Row Level Security policies.",
+      "location": "http://127.0.0.1:8088/assets/index-abc123.js",
+      "evidence": "eyJhbG…rZXk",
+      "remediation": "Make sure RLS is enabled on every table in Supabase > Authentication > Policies.",
+      "references": [],
+      "tags": [
+        "secret",
+        "supabase-anon-key"
+      ]
+    },
+    {
+      "id": "be8f175b7cd9",
+      "tool": "jscheck",
+      "check_id": "missing-referrer-policy",
+      "title": "Missing Referrer-Policy",
+      "severity": "info",
+      "category": "headers",
+      "description": "Full URLs (with tokens in them) may leak to other sites.",
+      "location": "http://127.0.0.1:8088/",
+      "evidence": "",
+      "remediation": "Add `Referrer-Policy: strict-origin-when-cross-origin`.",
+      "references": [],
+      "tags": [
+        "headers"
+      ]
+    },
+    {
+      "id": "b2cea2c63b54",
+      "tool": "jscheck",
+      "check_id": "missing-xcto",
+      "title": "Missing X-Content-Type-Options",
+      "severity": "info",
+      "category": "headers",
+      "description": "Browsers may MIME-sniff responses.",
+      "location": "http://127.0.0.1:8088/",
+      "evidence": "",
+      "remediation": "Add `X-Content-Type-Options: nosniff`.",
+      "references": [],
+      "tags": [
+        "headers"
+      ]
+    },
+    {
+      "id": "26eeacc757bc",
+      "tool": "jscheck",
+      "check_id": "version-disclosure-server",
+      "title": "Server header reveals version",
+      "severity": "info",
+      "category": "headers",
+      "description": "Version numbers help attackers pick exploits.",
+      "location": "http://127.0.0.1:8088/",
+      "evidence": "server: Express/4.18.2 Python/3.13.18",
+      "remediation": "Remove or genericize the server header.",
+      "references": [],
+      "tags": [
+        "headers"
+      ]
+    },
+    {
+      "id": "d1440f0ea09a",
+      "tool": "jscheck",
+      "check_id": "version-disclosure-x-powered-by",
+      "title": "X-Powered-By header reveals version",
+      "severity": "info",
+      "category": "headers",
+      "description": "Version numbers help attackers pick exploits.",
+      "location": "http://127.0.0.1:8088/",
+      "evidence": "x-powered-by: Express 4.18.2",
+      "remediation": "Remove or genericize the x-powered-by header.",
+      "references": [],
+      "tags": [
+        "headers"
+      ]
+    },
+    {
+      "id": "ee98c72631da",
+      "tool": "nmap",
+      "check_id": "open-port-8088",
+      "title": "Web port 8088 open (radan-http)",
+      "severity": "info",
+      "category": "open_port",
+      "description": "Expected for a web app.",
+      "location": "127.0.0.1:8088/tcp",
+      "evidence": "8088/tcp open radan-http",
+      "remediation": "",
+      "references": [],
+      "tags": [
+        "port",
+        "8088"
+      ]
+    },
+    {
+      "id": "79eb87dade0b",
+      "tool": "httpx",
+      "check_id": "tech-python",
+      "title": "Built with Python:3.13.18",
+      "severity": "info",
+      "category": "tech",
+      "description": "Detected technology. Used to choose which checks matter.",
+      "location": "http://127.0.0.1:8088/",
+      "evidence": "Python:3.13.18",
+      "remediation": "",
+      "references": [],
+      "tags": [
+        "tech"
+      ]
+    }
+  ],
+  "summary": {
+    "total": 21,
+    "by_severity": {
+      "critical": 5,
+      "high": 2,
+      "medium": 2,
+      "low": 5,
+      "info": 7
+    },
+    "by_category": {
+      "exposed_file": 3,
+      "exposed_secret": 5,
+      "cors": 1,
+      "headers": 7,
+      "tls": 1,
+      "open_port": 3,
+      "tech": 1
+    },
+    "risk_score": 100,
+    "grade": "F"
+  },
+  "error": ""
+}

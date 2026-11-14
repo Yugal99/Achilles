@@ -1,0 +1,34 @@
+id: achilles-exposed-env
+info:
+  name: Exposed .env file
+  author: achilles
+  severity: critical
+  description: The app's .env file can be downloaded. It usually contains database passwords and API keys.
+  remediation: Remove .env from the deployed folder, add it to .gitignore, and rotate every secret it contained.
+  tags: achilles,exposure,env,config
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/.env"
+      - "{{BaseURL}}/.env.local"
+      - "{{BaseURL}}/.env.production"
+    stop-at-first-match: true
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: regex
+        part: body
+        regex:
+          - '(?m)^\s*[A-Z][A-Z0-9_]{2,}\s*=\s*\S+'
+      - type: word
+        part: body
+        words: ["<html", "<!doctype"]
+        negative: true
+        case-insensitive: true
+    extractors:
+      - type: regex
+        part: body
+        group: 1
+        regex:
+          - '(?m)^\s*([A-Z][A-Z0-9_]{2,})\s*='
