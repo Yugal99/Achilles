@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Start a scan and poll until it finishes, then print a summary.
-#   ./scripts/scan.sh https://myapp.example.com [demo|standard|deep]
+#   ./scripts/scan.sh https://myapp.example.com [demo|web|standard|deep]
 # Env: API (default http://localhost:8000), ACHILLES_API_KEY
 set -euo pipefail
 TARGET="${1:?usage: scan.sh <url> [profile]}"; PROFILE="${2:-demo}"

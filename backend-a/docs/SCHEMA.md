@@ -15,7 +15,7 @@ Every scan, whatever tools ran, comes back as one `ScanResult` object. Backend B
 | `schema_version` | string | `"1.0"` |
 | `scan_id` | string | `scn_` + 12 hex chars |
 | `status` | enum | `queued` · `running` · `completed` (all tools ok/skipped) · `partial` (finished, but ≥1 tool timed out, errored or isn't installed) · `failed` (nothing usable; see `error`) · `cancelled` |
-| `profile` | string | `demo` · `standard` · `deep` |
+| `profile` | string | `demo` · `web` · `standard` · `deep` |
 | `target` | Target | What was scanned |
 | `created_at` / `started_at` / `finished_at` | ISO-8601 UTC string or null | |
 | `duration_s` | number or null | Wall-clock scan time |

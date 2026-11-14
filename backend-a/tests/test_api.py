@@ -79,3 +79,14 @@ def test_deadline_gives_partial(monkeypatch):
             assert s["tools"]["nmap"]["status"] == "ok"
     finally:
         fake.DELAYS = {k: 0.2 for k in fake.DELAYS}
+
+
+def test_web_profile_skips_nmap():
+    with TestClient(app) as c:
+        r = c.post("/api/v1/scans", json={"target": "https://lab.test", "profile": "web"}, headers=H)
+        assert r.status_code == 202
+        s = wait(c, r.json()["scan_id"])
+        assert s["tools"]["nmap"]["status"] == "skipped"
+        assert all(s["tools"][t]["status"] == "ok" for t in ("httpx", "nuclei", "testssl", "jscheck"))
+        res = c.get(f"/api/v1/scans/{s['scan_id']}/results", headers=H).json()
+        assert not any(f["tool"] == "nmap" for f in res["findings"])

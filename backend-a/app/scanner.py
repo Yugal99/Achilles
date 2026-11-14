@@ -198,6 +198,8 @@ class ScanManager:
         ctx = ToolContext(scan_id=s.scan_id, target=s.target, opts=opts, raw_dir=raw,
                           bin=settings.bins.get(key, "") if key else "")
         try:
+            if opts.get("skip"):  # profile switches this tool off (e.g. nmap in the web profile)
+                raise ToolSkipped(opts["skip"])
             if settings.fake_tools:
                 out: ToolOutput = await asyncio.wait_for(fake.run(name, ctx), timeout=opts["timeout"])
             else:

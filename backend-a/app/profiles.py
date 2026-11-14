@@ -22,6 +22,20 @@ PROFILES: dict[str, dict] = {
             "jscheck": {"timeout": 60, "max_scripts": 25},
         },
     },
+    "web": {
+        "description": "Hosted web apps on shared infrastructure (Railway, Vercel...). No port scan: "
+                       "only httpx, Nuclei, testssl.sh and the JS key/header checker, at a gentle request rate.",
+        "deadline_s": 110,
+        "tools": {
+            "nmap":    {"timeout": 5, "skip": "web profile never port-scans (shared hosting)"},
+            "httpx":   {"timeout": 25},
+            "nuclei":  {"timeout": 100, "tags": "achilles,exposure,config,misconfig,cors,debug,panel,token,keys,"
+                                                "firebase,supabase,env,git,backup,logs",
+                        "severity": "low,medium,high,critical", "rate_limit": 50, "concurrency": 10},
+            "testssl": {"timeout": 100, "args": ["-p", "-S"]},
+            "jscheck": {"timeout": 60, "max_scripts": 25},
+        },
+    },
     "standard": {
         "description": "Top 1000 ports, broader Nuclei set, TLS vulnerabilities. ~5-10 min.",
         "deadline_s": 900,

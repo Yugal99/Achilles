@@ -24,7 +24,7 @@ Every error has the same body:
 | HTTP | code | When |
 | --- | --- | --- |
 | 400 | `bad_target` | Not an http(s) URL / no host / credentials in URL |
-| 400 | `bad_profile` | Profile isn't `demo`, `standard` or `deep` |
+| 400 | `bad_profile` | Profile isn't `demo`, `web`, `standard` or `deep` |
 | 400 | `target_blocked` | Host resolves to a private/loopback/metadata IP, or doesn't resolve |
 | 401 | `unauthorized` | Missing/wrong `X-API-Key` |
 | 403 | `ownership_not_verified` | Host hasn't passed the ownership check |

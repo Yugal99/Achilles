@@ -58,6 +58,22 @@ cp .env.example .env
 Note: on Kali, ProjectDiscovery's httpx is called **`httpx-toolkit`** (plain `httpx` is a Python library). testssl.sh is called **`testssl`**. The service finds both automatically.
 </details>
 
+<details><summary>Fedora instead of Kali</summary>
+
+`setup_kali.sh` uses `apt`; on Fedora do it by hand with `dnf` and Go:
+
+```bash
+sudo dnf install -y nmap testssl bind-utils util-linux python3 python3-pip golang curl jq
+go install github.com/projectdiscovery/httpx/cmd/httpx@latest
+go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+echo 'export PATH="$PATH:$HOME/go/bin"' >> ~/.bashrc && export PATH="$PATH:$HOME/go/bin"
+nuclei -update-templates
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && cp .env.example .env
+```
+
+Notes: Fedora's `testssl` package provides the `testssl` command (found automatically). ProjectDiscovery's httpx is installed as plain `httpx` in `~/go/bin`; make sure `which httpx` points there and not at the Python `httpx` CLI package (if it doesn't, set `ACHILLES_HTTPX_BIN=$HOME/go/bin/httpx` in `.env`). `hexdump` comes from `util-linux`, `dig` from `bind-utils`.
+</details>
+
 ### Step 4. Set an API key
 
 ```bash
@@ -200,8 +216,11 @@ They run without any tools installed (parsers use sample output; the API tests u
 | Profile | Nmap | Nuclei | testssl | Hard deadline |
 | --- | --- | --- | --- | --- |
 | `demo` (default) | 40 focused ports (DBs, dev servers, admin panels) + the app's port | curated tags + `templates/achilles` | protocols + certificate | **110 s** |
+| `web` | **skipped** (never port-scans) | curated tags, gentle rate (50 req/s) | protocols + certificate | **110 s** |
 | `standard` | top 1000 ports | all templates, low+ | + ciphers, vulnerabilities | 15 min |
 | `deep` | all 65535 ports | all templates, incl. info | full | 60 min |
+
+Use `web` for apps on shared hosting (Railway, Vercel, Render...): ports on those hosts belong to the platform, not you, so Nmap is skipped and reported as `skipped` in `tools.nmap`. Start it with `./scripts/scan.sh https://myapp.up.railway.app web` (second argument = profile) or `"profile": "web"` in the API body.
 
 Each tool has its own timeout too (see `app/profiles.py`). When a tool hits its limit it's killed, whatever it already found is kept, it's marked `timeout`, and the scan ends as `partial` instead of failing.
 
@@ -223,7 +242,7 @@ app/
   main.py          FastAPI routes
   scanner.py       job queue, parallel tool runs, timeouts, merging
   models.py        the ScanResult / Finding schema (pydantic)
-  profiles.py      demo / standard / deep settings
+  profiles.py      demo / web / standard / deep settings
   ownership.py     DNS TXT + well-known file verification
   targets.py       URL parsing, private-IP blocking
   runner.py        subprocess runner with hard kill on timeout
