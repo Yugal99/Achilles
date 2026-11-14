@@ -3,7 +3,7 @@ Find your app's Achilles' heel before someone else does.
 
 Achilles is a security recon tool for vibe-coded apps. Paste in the URL of an app you built with an AI builder (Lovable, Bolt, Replit, Cursor and others). Achilles runs a safe, non-destructive scan from a Kali Linux backend and hands back a five-slide presentation: what it found, why each finding matters, and a fix prompt you can paste straight back into your AI builder.
 
-Built for [Hackathon name] · [Track(s)]
+Built for HackUTA 
 
 The problem
 AI builders let anyone ship a full-stack app in an afternoon, and most of those apps never get a security review. The same mistakes show up again and again:
@@ -47,7 +47,7 @@ JS-bundle and header checker (custom)	API keys in client JavaScript and missing 
 Built with (sponsor tech)
 Sponsor	How Achilles uses it
 Vultr	Hosts the Kali scanner VM, the site, the API, the queue and the database
-GoDaddy Registry	The demo domain: [your-domain.xyz]
+GoDaddy Registry	The demo domain: https://github.com/zeyneplu/Capital_insight
 SpaceXSI (Cursor + Grok)	Achilles was built with Cursor, and Grok writes the plain-English fixes and prompts
 Solana (stretch)	Anchors a SHA-256 hash of each report on-chain as tamper-proof proof of testing. Only the hash goes on-chain, never the findings
 Reliability
@@ -58,7 +58,7 @@ Tested against known-vulnerable targets: OWASP Juice Shop, plus a seeded test ap
 Getting started
 Prerequisites: Docker and Docker Compose, a Kali Linux host (we use a Vultr VM), and API keys for Grok (optionally Gemini or Claude).
 
-git clone https://github.com/[your-username]/achilles.git
+git clone https://github.com/yugal99/achilles.git
 cd achilles
 cp .env.example .env        # add your API keys and database settings
 docker compose up --build
