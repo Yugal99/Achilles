@@ -1,0 +1,95 @@
+{
+  "scan_id": "scn_b9b67716f314",
+  "status": "completed",
+  "profile": "demo",
+  "target": {
+    "input": "http://127.0.0.1:8088",
+    "url": "http://127.0.0.1:8088/",
+    "scheme": "http",
+    "host": "127.0.0.1",
+    "port": 8088,
+    "ips": [
+      "127.0.0.1"
+    ]
+  },
+  "progress": 100,
+  "queue_position": null,
+  "created_at": "2026-11-14T21:17:04.699894Z",
+  "started_at": "2026-11-14T21:17:04.700451Z",
+  "finished_at": "2026-11-14T21:17:16.988224Z",
+  "duration_s": 12.3,
+  "tools": {
+    "nmap": {
+      "status": "ok",
+      "started_at": "2026-11-14T21:17:04.701600Z",
+      "finished_at": "2026-11-14T21:17:16.987245Z",
+      "duration_s": 12.3,
+      "timeout_s": 75,
+      "findings_count": 3,
+      "message": "3 open ports",
+      "command": "/usr/bin/nmap -Pn -sT -sV --version-light -T4 --max-retries 1 --host-timeout 70s --open -oX - -p 21,22,23,25,80,443,445,1433,1521,2375,2376,3000,3001,3306,4000,4200,5000,5001,5173,5432,5601,5984,6379,7474,8000,8080,8081,8443,8888,9000,9090,9200,9229,9300,11211,15672,27017,28017,50000,8088 127.0.0.1"
+    },
+    "httpx": {
+      "status": "ok",
+      "started_at": "2026-11-14T21:17:04.703323Z",
+      "finished_at": "2026-11-14T21:17:06.601180Z",
+      "duration_s": 1.9,
+      "timeout_s": 25,
+      "findings_count": 1,
+      "message": "Python:3.13.18",
+      "command": "/usr/bin/httpx-toolkit -u http://127.0.0.1:8088/ -json -silent -no-color -tech-detect -title -status-code -web-server -content-type -location -cdn -follow-redirects -timeout 10 -retries 1"
+    },
+    "nuclei": {
+      "status": "ok",
+      "started_at": "2026-11-14T21:17:04.705001Z",
+      "finished_at": "2026-11-14T21:17:04.917060Z",
+      "duration_s": 0.2,
+      "timeout_s": 100,
+      "findings_count": 0,
+      "message": "2 template matches",
+      "command": "/usr/bin/nuclei -u http://127.0.0.1:8088/ -jsonl -silent -no-color -disable-update-check -ni -or -rl 150 -c 25 -timeout 7 -retries 1 -etags intrusive,dos,fuzz,fuzzing,bruteforce,brute-force,osint,headless,rce,sqli,xss,lfi,ssrf,default-login -t /home/kali/achilles/backend-a/templates/achilles -tags achilles,exposure,config,misconfig,cors,debug,panel,token,keys,firebase,supabase,env,git,backup,logs -severity low,medium,high,critical"
+    },
+    "testssl": {
+      "status": "skipped",
+      "started_at": "2026-11-14T21:17:04.706809Z",
+      "finished_at": "2026-11-14T21:17:04.707906Z",
+      "duration_s": 0.0,
+      "timeout_s": 100,
+      "findings_count": 0,
+      "message": "target is http://, no TLS to test",
+      "command": ""
+    },
+    "jscheck": {
+      "status": "ok",
+      "started_at": "2026-11-14T21:17:04.711235Z",
+      "finished_at": "2026-11-14T21:17:04.816534Z",
+      "duration_s": 0.1,
+      "timeout_s": 60,
+      "findings_count": 17,
+      "message": "checked 2 scripts, 5 secrets",
+      "command": "builtin:jscheck"
+    }
+  },
+  "summary": {
+    "total": 21,
+    "by_severity": {
+      "critical": 5,
+      "high": 2,
+      "medium": 2,
+      "low": 5,
+      "info": 7
+    },
+    "by_category": {
+      "exposed_file": 3,
+      "exposed_secret": 5,
+      "cors": 1,
+      "headers": 7,
+      "tls": 1,
+      "open_port": 3,
+      "tech": 1
+    },
+    "risk_score": 100,
+    "grade": "F"
+  },
+  "error": ""
+}

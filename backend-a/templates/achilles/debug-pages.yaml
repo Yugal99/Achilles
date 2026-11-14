@@ -1,0 +1,21 @@
+id: achilles-debug-mode
+info:
+  name: Framework debug mode enabled
+  author: achilles
+  severity: high
+  description: A framework debug page is shown to visitors. Debug pages leak source code, settings and sometimes secrets.
+  remediation: Turn off debug mode in production (DEBUG=False in Django, APP_DEBUG=false in Laravel, FLASK_DEBUG=0).
+  tags: achilles,exposure,debug,misconfig
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/achilles-debug-probe-404"
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "You're seeing this error because you have <code>DEBUG = True</code>"
+          - "Werkzeug Debugger"
+          - "Whoops! There was an error."
+          - "Ignition"
+        condition: or
