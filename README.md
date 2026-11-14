@@ -1,9 +1,9 @@
 Achilles
 Find your app's Achilles' heel before someone else does.
 
-Achilles is a security recon tool for vibe-coded apps. Paste in the URL of an app you built with an AI builder (Lovable, Bolt, Replit, Cursor and others). Achilles runs a safe, non-destructive scan from a Fedora Linux backend and hands back a five-slide presentation: what it found, why each finding matters, and a fix prompt you can paste straight back into your AI builder.
+Achilles is a security recon tool for vibe-coded apps. Paste in the URL of an app you built with an AI builder (Lovable, Bolt, Replit, Cursor and others). Achilles runs a safe, non-destructive scan from a Kali Linux backend and hands back a five-slide presentation: what it found, why each finding matters, and a fix prompt you can paste straight back into your AI builder.
 
-Built for [Hackathon name] · [Track(s)]
+Built for HackUTA 
 
 The problem
 AI builders let anyone ship a full-stack app in an afternoon, and most of those apps never get a security review. The same mistakes show up again and again:
@@ -17,14 +17,14 @@ Pentest tools like Nmap and Nuclei can find these issues, but their output is wr
 
 What Achilles does
 Verify: you prove you own the app with a DNS TXT record or a file at /.well-known/achilles.txt.
-Scan: a scanner worker runs five tools in parallel, each in its own sandboxed container.
+Scan: a Kali worker runs five tools in parallel, each in its own sandboxed container.
 Normalize: every tool's output is parsed into one common Finding format.
 Explain: Grok turns the findings into plain-English fixes and paste-ready prompts. It may only explain findings the tools actually produced, never invent new ones.
 Present: you get a five-slide deck covering the stack we saw, the top risks, why each one matters, how to fix it, and what you did well.
 The Demo profile finishes in under 2 minutes.
 
 Architecture
-Presentation site ──► Gate API ──► Job queue ──► Scanner workers ──► Target app
+Presentation site ──► Gate API ──► Job queue ──► Kali workers ──► Target app
    (Next.js)         (FastAPI)      (Redis)      (Docker, Vultr)   (owner-verified)
        ▲                                              │
        │                                              ▼
@@ -34,7 +34,7 @@ Part	Job
 Presentation site	Takes the URL, shows live progress, renders the slide deck
 Gate API	Checks ownership, blocks private and internal addresses, rate-limits, queues scans
 Job queue	Hands scans to free workers and retries failed steps
-Scanner workers	Run each tool in its own container with a time limit, allowed to reach only the verified target
+Kali workers	Run each tool in its own container with a time limit, allowed to reach only the verified target
 Normalizer	Parses each tool's output (Nmap XML, Nuclei JSON and so on) into Findings
 Tips engine	Ranks findings and writes the fixes (Grok, with Gemini or Claude as backup and a rule table as the last fallback)
 The toolkit
@@ -46,8 +46,8 @@ testssl.sh	Weak TLS, and expired or mismatched certificates
 JS-bundle and header checker (custom)	API keys in client JavaScript and missing security headers
 Built with (sponsor tech)
 Sponsor	How Achilles uses it
-Vultr	Hosts the Fedora scanner VM, the site, the API, the queue and the database
-GoDaddy Registry	The demo domain: [your-domain.xyz]
+Vultr	Hosts the Kali scanner VM, the site, the API, the queue and the database
+GoDaddy Registry	The demo domain: https://github.com/zeyneplu/Capital_insight
 SpaceXSI (Cursor + Grok)	Achilles was built with Cursor, and Grok writes the plain-English fixes and prompts
 Solana (stretch)	Anchors a SHA-256 hash of each report on-chain as tamper-proof proof of testing. Only the hash goes on-chain, never the findings
 Reliability
@@ -56,9 +56,9 @@ Isolated crew: one container per tool per scan, running as non-root with a read-
 AI fallback chain: Grok, then Gemini or Claude, then rule-based tips.
 Tested against known-vulnerable targets: OWASP Juice Shop, plus a seeded test app with a leaked key and an exposed .env.
 Getting started
-Prerequisites: Docker and Docker Compose, a Fedora Linux host (we use a Vultr VM; see [backend-a/README.md](backend-a/README.md) to run the scanner directly with `./setup_fedora.sh`), and API keys for Grok (optionally Gemini or Claude).
+Prerequisites: Docker and Docker Compose, a Kali Linux host (we use a Vultr VM), and API keys for Grok (optionally Gemini or Claude).
 
-git clone https://github.com/[your-username]/achilles.git
+git clone https://github.com/yugal99/achilles.git
 cd achilles
 cp .env.example .env        # add your API keys and database settings
 docker compose up --build
