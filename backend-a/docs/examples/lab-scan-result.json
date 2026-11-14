@@ -48,7 +48,7 @@
       "timeout_s": 100,
       "findings_count": 0,
       "message": "2 template matches",
-      "command": "/usr/bin/nuclei -u http://127.0.0.1:8088/ -jsonl -silent -no-color -disable-update-check -ni -or -rl 150 -c 25 -timeout 7 -retries 1 -etags intrusive,dos,fuzz,fuzzing,bruteforce,brute-force,osint,headless,rce,sqli,xss,lfi,ssrf,default-login -t /home/kali/achilles/backend-a/templates/achilles -tags achilles,exposure,config,misconfig,cors,debug,panel,token,keys,firebase,supabase,env,git,backup,logs -severity low,medium,high,critical"
+      "command": "/home/yoyo12/go/bin/nuclei -u http://127.0.0.1:8088/ -jsonl -silent -no-color -disable-update-check -ni -or -rl 150 -c 25 -timeout 7 -retries 1 -etags intrusive,dos,fuzz,fuzzing,bruteforce,brute-force,osint,headless,rce,sqli,xss,lfi,ssrf,default-login -t /home/yoyo12/achilles/backend-a/templates/achilles -tags achilles,exposure,config,misconfig,cors,debug,panel,token,keys,firebase,supabase,env,git,backup,logs -severity low,medium,high,critical"
     },
     "testssl": {
       "status": "skipped",

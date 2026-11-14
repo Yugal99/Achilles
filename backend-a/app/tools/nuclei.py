@@ -99,7 +99,7 @@ def parse(stdout: str) -> list:
 
 async def run(ctx: ToolContext) -> ToolOutput:
     if not ctx.bin:
-        raise ToolNotInstalled("nuclei not found (apt install nuclei && nuclei -update-templates)")
+        raise ToolNotInstalled("nuclei not found (go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && nuclei -update-templates)")
     res = await run_cmd(build_argv(ctx), timeout=ctx.opts["timeout"] - 2, env={"HOME": os.environ.get("HOME", "/root")})
     save_raw(ctx, "nuclei.jsonl", res.stdout)
     if res.stderr:

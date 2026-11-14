@@ -28,7 +28,7 @@ class Settings:
         # Scans that may run at the same time. Each scan already runs its tools in parallel.
         self.max_concurrent_scans = int(_env("MAX_CONCURRENT_SCANS", "1"))
         self.max_queue = int(_env("MAX_QUEUE", "20"))
-        # Fake mode returns canned results without running any tool, for frontend work off-Kali.
+        # Fake mode returns canned results without running any tool, for frontend work without the scanner tools installed.
         self.fake_tools = _bool("FAKE_TOOLS", False)
         # Hosts/IPs you run yourself (e.g. Juice Shop on the LAN). Skips the ownership check
         # AND the private-address block. Never put a third-party host here.
@@ -41,7 +41,7 @@ class Settings:
 
         self.bins = {
             "nmap": _env("NMAP_BIN", "") or _which("nmap"),
-            # Kali ships ProjectDiscovery httpx as "httpx-toolkit"; plain "httpx" is often the Python client.
+            # ProjectDiscovery httpx is "httpx" (Fedora, via go install) or "httpx-toolkit" (Debian/Kali); plain "httpx" may also be the Python client, checked below.
             "httpx": _env("HTTPX_BIN", "") or _which("httpx-toolkit", "pd-httpx"),
             "nuclei": _env("NUCLEI_BIN", "") or _which("nuclei"),
             "testssl": _env("TESTSSL_BIN", "") or _which("testssl", "testssl.sh"),

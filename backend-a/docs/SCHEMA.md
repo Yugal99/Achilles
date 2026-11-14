@@ -75,7 +75,7 @@ This is the unit Backend B explains and the deck shows.
 | `duration_s` | number or null | |
 | `timeout_s` | int | This tool's limit in the chosen profile |
 | `findings_count` | int | Findings from this tool after de-duplication |
-| `message` | string | Human-readable one-liner, e.g. `"3 open ports"`, `"nuclei not found (apt install nuclei ...)"`. Good for "which checks were cut short" in the deck |
+| `message` | string | Human-readable one-liner, e.g. `"3 open ports"`, `"nuclei not found (dnf install ...)"`. Good for "which checks were cut short" in the deck |
 | `command` | string | Exact command line that ran (for the "how we tested" slide / Q&A) |
 
 ## Target

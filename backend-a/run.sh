@@ -2,6 +2,7 @@
 # Start the Achilles scanner API.  Usage: ./run.sh   (reads settings from .env)
 set -euo pipefail
 cd "$(dirname "$0")"
+export PATH="$PATH:$HOME/go/bin"   # Go-installed httpx/nuclei live here on Fedora
 if [ -f .env ]; then set -a; . ./.env; set +a; fi
 HOST="${ACHILLES_HOST:-0.0.0.0}"
 PORT="${ACHILLES_PORT:-8000}"

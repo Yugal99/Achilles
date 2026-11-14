@@ -1,7 +1,7 @@
 # Achilles Scanner API (Backend A)
 
-Base URL: `http://<kali-vm-ip>:8000` (or the tunnel URL). All paths start with `/api/v1`.
-Interactive docs (try every call in the browser): `http://<kali-vm-ip>:8000/docs`.
+Base URL: `http://<host-ip>:8000` (or the tunnel URL). All paths start with `/api/v1`.
+Interactive docs (try every call in the browser): `http://<host-ip>:8000/docs`.
 
 ## Auth
 

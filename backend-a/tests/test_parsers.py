@@ -1,4 +1,4 @@
-"""Parser tests with sample tool output, so they run without Kali tools installed."""
+"""Parser tests with sample tool output, so they run without the scanner tools installed."""
 import json
 
 from app.tools import httpx_probe, nmap, nuclei, testssl

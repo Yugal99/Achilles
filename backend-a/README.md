@@ -1,6 +1,6 @@
-# Achilles Backend A: Kali scanner service
+# Achilles Backend A: scanner service (Fedora)
 
-A small API that runs on a Kali Linux VM. You give it a URL you own, it runs **Nmap, httpx, Nuclei, testssl.sh and a leaked-key/header checker** in parallel, and it returns one JSON report. Backend B and the frontend only ever talk to this API.
+A small API that runs on Fedora Linux (a VM or your own machine). You give it a URL you own, it runs **Nmap, httpx, Nuclei, testssl.sh and a leaked-key/header checker** in parallel, and it returns one JSON report. Backend B and the frontend only ever talk to this API.
 
 - API reference: [docs/API.md](docs/API.md)
 - Result format (the JSON everyone builds against): [docs/SCHEMA.md](docs/SCHEMA.md)
@@ -8,70 +8,56 @@ A small API that runs on a Kali Linux VM. You give it a URL you own, it runs **N
 
 ---
 
-## Step-by-step: set it up on your Kali VM
+## Step-by-step: set it up on Fedora
 
-### Step 1. Give the VM a network your teammates can reach
+### Step 1. Network (only if you use a VM)
 
-Do this in VirtualBox/VMware **before** booting Kali (VM powered off):
+Running directly on a Fedora machine? Skip this step. For a VM, set the adapter to **Bridged** (VirtualBox: Settings → Network → Adapter 1 → Bridged Adapter; VMware: Bridged; UTM: Bridged (Advanced)) so teammates can reach it, and give it at least 2 CPUs and 4 GB RAM.
 
-- **VirtualBox:** Settings → Network → Adapter 1 → *Attached to:* **Bridged Adapter** → pick your laptop's Wi-Fi or Ethernet card.
-- **VMware:** VM Settings → Network Adapter → **Bridged**.
-- **UTM (Mac):** Network → **Bridged (Advanced)**.
+> If your Wi-Fi blocks laptop-to-laptop traffic (common at hackathons), use the tunnel in Step 9, option B.
 
-Bridged gives the VM its own IP on the same network as your teammates. Give the VM at least 2 CPUs and 4 GB RAM.
-
-> If your hackathon Wi-Fi blocks laptop-to-laptop traffic (common), skip to Step 9, option B (tunnel).
-
-### Step 2. Get the code into the VM
-
-Copy the whole `backend-a` folder into the VM, e.g. to `~/achilles/backend-a`. Either:
+### Step 2. Get the code
 
 ```bash
-# if it's in your team's GitHub repo
 git clone https://github.com/<you>/achilles.git ~/achilles
 cd ~/achilles/backend-a
 ```
 
-or drag the folder in with VirtualBox shared folders / `scp -r backend-a kali@<vm-ip>:~/achilles/`.
+(or copy the folder over with `scp -r backend-a <user>@<host>:~/achilles/`).
 
 ### Step 3. Run the setup script (installs everything)
 
 ```bash
 cd ~/achilles/backend-a
-chmod +x setup_kali.sh run.sh scripts/*.sh lab/vuln_app.py
-./setup_kali.sh
+chmod +x setup_fedora.sh run.sh scripts/*.sh lab/vuln_app.py
+./setup_fedora.sh
 ```
 
-It installs `nmap httpx-toolkit nuclei testssl.sh dnsutils bsdextrautils python3-venv jq`, creates a Python virtualenv in `.venv`, downloads the Nuclei templates and creates `.env`. At the end it prints a tool check; every line should show a path, none should say `MISSING`.
+It runs `dnf install` for `nmap testssl bind-utils util-linux python3 golang jq curl openssl`, installs ProjectDiscovery **httpx** and **Nuclei** with `go install` (into `~/go/bin`, since Fedora doesn't package them), creates a Python virtualenv in `.venv`, downloads the Nuclei templates and creates `.env`. At the end it prints a tool check; every line should show a path, none should say `MISSING`.
+
+`run.sh` adds `~/go/bin` to `PATH` itself. To use httpx/nuclei in your own shell too:
+
+```bash
+echo 'export PATH="$PATH:$HOME/go/bin"' >> ~/.zshrc   # or ~/.bashrc
+```
 
 <details><summary>Doing it by hand instead</summary>
 
 ```bash
-sudo apt update
-sudo apt install -y nmap httpx-toolkit nuclei testssl.sh dnsutils bsdextrautils python3-venv python3-pip curl jq
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+sudo dnf install -y nmap testssl bind-utils util-linux python3 python3-pip golang curl jq openssl
+go install github.com/projectdiscovery/httpx/cmd/httpx@latest
+go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+export PATH="$PATH:$HOME/go/bin"
 nuclei -update-templates
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Note: on Kali, ProjectDiscovery's httpx is called **`httpx-toolkit`** (plain `httpx` is a Python library). testssl.sh is called **`testssl`**. The service finds both automatically.
-</details>
-
-<details><summary>Fedora instead of Kali</summary>
-
-`setup_kali.sh` uses `apt`; on Fedora do it by hand with `dnf` and Go:
-
-```bash
-sudo dnf install -y nmap testssl bind-utils util-linux python3 python3-pip golang curl jq
-go install github.com/projectdiscovery/httpx/cmd/httpx@latest
-go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
-echo 'export PATH="$PATH:$HOME/go/bin"' >> ~/.bashrc && export PATH="$PATH:$HOME/go/bin"
-nuclei -update-templates
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && cp .env.example .env
-```
-
-Notes: Fedora's `testssl` package provides the `testssl` command (found automatically). ProjectDiscovery's httpx is installed as plain `httpx` in `~/go/bin`; make sure `which httpx` points there and not at the Python `httpx` CLI package (if it doesn't, set `ACHILLES_HTTPX_BIN=$HOME/go/bin/httpx` in `.env`). `hexdump` comes from `util-linux`, `dig` from `bind-utils`.
+Notes:
+- Fedora's `testssl` package provides the `testssl` command (found automatically). `hexdump` comes from `util-linux`, `dig` from `bind-utils`.
+- ProjectDiscovery's httpx installs as plain `httpx`. The service checks that `httpx` really is the ProjectDiscovery one. If `which httpx` points at the Python `httpx` CLI instead, set `ACHILLES_HTTPX_BIN=$HOME/go/bin/httpx` in `.env`.
+- Need a newer Go than Fedora ships? `go install` downloads the toolchain it needs automatically (Go 1.21+).
+- SELinux does not get in the way of any of this; no policy changes are needed.
 </details>
 
 ### Step 4. Set an API key
@@ -164,10 +150,17 @@ Verification lasts 24 hours. Private, loopback and cloud-metadata IPs are always
 ### Step 8. Find the VM's IP
 
 ```bash
-ip -4 -br addr        # look for eth0, e.g. 192.168.1.42/24
+ip -4 -br addr        # e.g. enp1s0 192.168.1.42/24
 ```
 
-Kali has no firewall enabled by default. If you installed `ufw`, run `sudo ufw allow 8000/tcp`.
+Fedora runs `firewalld`, which blocks port 8000 from other machines. Open it:
+
+```bash
+sudo firewall-cmd --add-port=8000/tcp --permanent
+sudo firewall-cmd --reload
+```
+
+(Not needed for `localhost` use or when going through the tunnel in Step 9.)
 
 ### Step 9. Let teammates use it
 
@@ -179,12 +172,11 @@ curl -s http://192.168.1.42:8000/api/v1/health
 
 Set `ACHILLES_CORS_ORIGINS` in `.env` to the frontend's origin(s) (e.g. `http://localhost:3000,https://achilles.yourdomain.xyz`) or keep `*`.
 
-**Option B: different networks, or the Wi-Fi blocks peer traffic.** Open a free tunnel from the VM:
+**Option B: different networks, or the Wi-Fi blocks peer traffic.** Open a free tunnel from the Fedora host:
 
 ```bash
-# amd64 VM; on an Apple-silicon Mac (UTM) use cloudflared-linux-arm64.deb
-curl -LO https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-sudo dpkg -i cloudflared-linux-amd64.deb
+# x86_64; on ARM use cloudflared-linux-aarch64.rpm
+sudo dnf install -y https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-x86_64.rpm
 cloudflared tunnel --url http://localhost:8000
 ```
 
@@ -205,7 +197,7 @@ They run without any tools installed (parsers use sample output; the API tests u
 
 ## Demo-day checklist
 
-- [ ] VM booted, `./run.sh` running, `/api/v1/health` shows all five tools installed.
+- [ ] Host/VM up, `./run.sh` running, `/api/v1/health` shows all five tools installed.
 - [ ] Demo target is an app **you own**, verified in the last 24 h (re-run `verify.sh check` that morning). The seeded `lab/vuln_app.py` deployed on your demo domain makes a great target: guaranteed critical findings.
 - [ ] Run one full demo scan 10 minutes before you present (warms DNS and Nuclei's template cache). Demo profile finishes well under 2 minutes; the hard cap is 110 s.
 - [ ] **Backup plan:** if Wi-Fi dies, set `ACHILLES_FAKE_TOOLS=1` in `.env` and restart. The API returns realistic canned results (~10 s) in the exact same format, so the frontend works unchanged.
