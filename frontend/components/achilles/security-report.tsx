@@ -1,43 +1,56 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ArrowLeft, ChevronLeft, ChevronRight, Swords } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { countBySeverity, severityMeta, type Finding } from '@/lib/achilles-data'
 import { securityScoreOf, toUiFindings, verdictOf } from '@/lib/fixes'
 import type { ScanResult, TipsResponse } from '@/lib/scan-types'
+import { godFor } from '@/lib/pantheon'
 import { ExportMenu } from './export-menu'
+import { Owl } from './god-icons'
 import { ScoreRing } from './results-dashboard'
 import { SeverityBadge } from './severity-badge'
 import { CopyButton } from './copy-button'
 import { cn } from '@/lib/utils'
-import { btn } from './kit'
+import { btn, StepHeading } from './kit'
+import { MeanderBand } from './motifs'
 
 function PromptCard({ finding }: { finding: Finding }) {
   return (
-    <article className="rounded-xl border border-border bg-card p-5">
+    <article className="rounded-lg border border-border bg-background p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
+          <GodMark finding={finding} />
           <SeverityBadge severity={finding.severity} />
           <span className="text-xs text-muted-foreground">{finding.category}</span>
         </div>
         <CopyButton text={finding.fixPrompt} label="Copy fix prompt" />
       </div>
-      <h3 className="mt-3 text-base font-semibold text-navy">{finding.title}</h3>
+      <h3 className="font-display mt-3 text-base font-semibold text-foreground">{finding.title}</h3>
       <p className="mt-1 text-sm text-muted-foreground">{finding.summary}</p>
-      <p className="mt-4 border-l-2 border-aegean/40 pl-4 text-sm leading-relaxed text-navy/85">{finding.fixPrompt}</p>
+      <p className="mt-4 rounded-sm border border-dashed border-line-dotted p-4 text-sm leading-relaxed text-foreground">{finding.fixPrompt}</p>
     </article>
   )
 }
 
+function GodMark({ finding }: { finding: Finding }) {
+  const Icon = godFor({ category: finding.categoryKey, tool: finding.raw.tool }).icon
+  return (
+    <span className="flex size-10 shrink-0 items-center justify-center rounded-sm border border-line-strong text-accent">
+      <Icon size={24} />
+    </span>
+  )
+}
+
 function Empty({ text }: { text: string }) {
-  return <p className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">{text}</p>
+  return <p className="rounded-lg border border-dashed border-border bg-background p-5 text-sm text-muted-foreground">{text}</p>
 }
 
 function SlideHeader({ eyebrow, title, body }: { eyebrow: string; title: string; body?: string }) {
   return (
     <header>
-      <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.14em] text-primary uppercase"><span className="h-px w-6 bg-gold" aria-hidden="true" />{eyebrow}</p>
-      <h2 className="mt-3 text-2xl font-semibold tracking-tight text-balance text-navy sm:text-3xl">{title}</h2>
+      <p className="text-[13px] font-semibold tracking-[3px] text-accent uppercase">{eyebrow}</p>
+      <h2 className="mt-3 text-2xl font-semibold text-balance text-foreground sm:text-3xl">{title}</h2>
       {body && <p className="mt-2 max-w-2xl text-muted-foreground">{body}</p>}
     </header>
   )
@@ -67,11 +80,11 @@ export function SecurityReport({ scan, tips, onBack }: { scan: ScanResult; tips?
               title={`${host}: ${verdict.label.toLowerCase()}.`}
               body={`ACHILLES found ${findings.length} weakness${findings.length === 1 ? '' : 'es'}. ${verdict.text}`}
             />
-            <dl className="mt-8 grid grid-cols-4 gap-3">
+            <dl className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {(Object.keys(counts) as Array<keyof typeof counts>).map((s) => (
-                <div key={s} className="rounded-lg border border-border p-3">
+                <div key={s} className="rounded-md border border-border bg-background p-3">
                   <dt className={cn('text-xs font-semibold', severityMeta[s].text)}>{severityMeta[s].label}</dt>
-                  <dd className="mt-1 text-2xl font-semibold text-navy tabular-nums">{counts[s]}</dd>
+                  <dd className="font-display mt-1 text-2xl font-semibold text-foreground tabular-nums">{counts[s]}</dd>
                 </div>
               ))}
             </dl>
@@ -142,26 +155,28 @@ export function SecurityReport({ scan, tips, onBack }: { scan: ScanResult; tips?
             title="Your route to a safer app."
             body="Work top to bottom, or copy the full plan as one prompt for your AI builder. Rescan afterwards to confirm each fix."
           />
-          <ol className="mt-8 flex flex-col divide-y divide-border rounded-lg border border-border">
+          <ol className="mt-8 flex flex-col divide-y divide-border rounded-lg border border-border bg-background">
             {findings.map((f, i) => (
               <li key={f.id} className="flex items-center gap-4 px-5 py-3.5">
-                <span className="font-mono text-sm text-gold-ink">{i + 1}</span>
-                <span className="min-w-0 flex-1 truncate text-sm text-navy">{f.title}</span>
+                <span className="w-5 font-mono text-sm text-accent">{i + 1}</span>
+                <GodMark finding={f} />
+                <span className="min-w-0 flex-1 truncate text-sm text-foreground">{f.title}</span>
                 <SeverityBadge severity={f.severity} className="hidden sm:inline-flex" />
               </li>
             ))}
           </ol>
-          <div className="mt-6 flex flex-col items-start justify-between gap-4 rounded-xl border border-aegean/25 bg-sky/40 p-5 sm:flex-row sm:items-center">
+          <div className="mt-6 flex flex-col items-start justify-between gap-4 rounded-sm border border-accent bg-surface-selected p-5 sm:flex-row sm:items-center">
             <div className="flex items-center gap-3">
-              <Swords className="size-5 text-primary" aria-hidden="true" />
+              <Owl size={32} className="shrink-0 text-accent" />
               <div>
-                <p className="text-sm font-semibold text-navy">Fix everything in one prompt</p>
+                <p className="text-sm font-semibold text-foreground">Fix everything in one prompt</p>
                 <p className="text-xs text-muted-foreground">{findings.length} fix{findings.length === 1 ? '' : 'es'}, most severe first</p>
               </div>
             </div>
             <CopyButton text={battlePlan} label="Copy full fix plan" variant="solid" />
           </div>
-          <div className="mt-6">
+          <div className="mt-8">
+            <MeanderBand className="mb-6" />
             <ExportMenu scan={scan} findings={findings} />
           </div>
         </div>
@@ -184,31 +199,35 @@ export function SecurityReport({ scan, tips, onBack }: { scan: ScanResult; tips?
 
   return (
     <div className="mx-auto max-w-5xl">
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-navy"
-        >
-          <ArrowLeft className="size-4" aria-hidden="true" /> Back to results
-        </button>
+      <button type="button" onClick={onBack} className={cn(btn.ghost, '-ml-3')}>
+        <ArrowLeft className="size-4" aria-hidden="true" /> Back to results
+      </button>
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+        <StepHeading
+          title="Security report"
+          plain={
+            <>
+              Every finding and its fix for <span className="font-mono text-foreground break-all">{host}</span>
+            </>
+          }
+        />
         <p className="text-sm text-muted-foreground">
-          Slide <span className="font-semibold text-navy">{index + 1}</span> of {slides.length}
+          Page <span className="font-semibold text-foreground">{index + 1}</span> of {slides.length}
         </p>
       </div>
 
       <section
         aria-roledescription="carousel"
         aria-label="Security report"
-        className="relative mt-6 overflow-hidden rounded-2xl border border-border bg-card shadow-[0_20px_60px_-40px_rgb(16_42_67/0.45)]"
+        className="relative mt-6 overflow-hidden rounded-lg border border-border bg-card"
       >
-        <div className="meander absolute inset-x-0 top-3" aria-hidden="true" />
+        <MeanderBand className="absolute inset-x-0 top-0" />
         <div
           key={index}
           role="group"
           aria-roledescription="slide"
           aria-label={`${index + 1} of ${slides.length}: ${slides[index].title}`}
-          className="animate-fade-up min-h-[30rem] p-6 pt-10 sm:p-10 sm:pt-14"
+          className="animate-fade-up min-h-[30rem] p-6 pt-14 sm:p-10 sm:pt-16"
         >
           {slides[index].content}
         </div>
@@ -223,7 +242,7 @@ export function SecurityReport({ scan, tips, onBack }: { scan: ScanResult; tips?
         >
           <ChevronLeft className="size-4" aria-hidden="true" /> Previous
         </button>
-        <div className="flex gap-2">
+        <div className="flex">
           {slides.map((s, i) => (
             <button
               key={s.title}
@@ -231,15 +250,17 @@ export function SecurityReport({ scan, tips, onBack }: { scan: ScanResult; tips?
               onClick={() => go(i)}
               aria-label={`Go to slide ${i + 1}: ${s.title}`}
               aria-current={i === index ? 'true' : undefined}
-              className={cn('h-1.5 rounded-full transition-all', i === index ? 'w-8 bg-aegean' : 'w-3 bg-border hover:bg-muted-foreground')}
-            />
+              className="group flex h-12 items-center px-1"
+            >
+              <span className={cn('block h-1.5 rounded-full transition-all', i === index ? 'w-8 bg-accent' : 'w-3 bg-border group-hover:bg-muted-foreground')} />
+            </button>
           ))}
         </div>
         <button
           type="button"
           onClick={() => go(index + 1)}
           disabled={index === last}
-          className={cn(btn.primary, "h-9 px-4")}
+          className={cn(btn.primary, 'px-4')}
         >
           Next <ChevronRight className="size-4" aria-hidden="true" />
         </button>

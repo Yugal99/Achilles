@@ -79,6 +79,27 @@
           },
           "title": "Tags",
           "type": "array"
+        },
+        "cvss_score": {
+          "anyOf": [
+            {
+              "maximum": 10,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "CVSS base score (0.0-10.0) as stated by the tool. null when the tool gives none; Achilles never estimates one.",
+          "title": "Cvss Score"
+        },
+        "cvss_vector": {
+          "default": "",
+          "description": "CVSS vector string, e.g. CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+          "title": "Cvss Vector",
+          "type": "string"
         }
       },
       "required": [

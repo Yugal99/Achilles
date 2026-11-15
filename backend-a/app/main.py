@@ -88,8 +88,9 @@ def health():
 
 @app.get("/api/v1/profiles", dependencies=[Auth])
 def profiles():
-    return {name: {"description": p["description"], "deadline_s": p["deadline_s"],
-                   "tool_timeouts_s": {t: o["timeout"] for t, o in p["tools"].items()}}
+    # 0 means no limit (the deep profile).
+    return {name: {"description": p["description"], "deadline_s": p["deadline_s"] or 0,
+                   "tool_timeouts_s": {t: o["timeout"] or 0 for t, o in p["tools"].items()}}
             for name, p in PROFILES.items()}
 
 
@@ -133,12 +134,13 @@ def start_scan(body: ScanBody):
             check_network_policy(t)
         except TargetError as e:
             raise ApiError(400, "target_blocked", str(e))
+    joined = manager.active_scan(t, body.profile) is not None
     try:
         s = manager.submit(t, body.profile)
     except QueueFull as e:
         raise ApiError(429, "queue_full", str(e))
     return {"scan_id": s.scan_id, "status": s.status, "profile": s.profile, "target": s.target,
-            "queue_position": s.queue_position,
+            "queue_position": s.queue_position, "joined": joined,
             "links": {"status": f"/api/v1/scans/{s.scan_id}", "results": f"/api/v1/scans/{s.scan_id}/results"}}
 
 

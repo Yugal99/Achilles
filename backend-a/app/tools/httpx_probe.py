@@ -5,7 +5,7 @@ import json
 
 from ..models import Stack
 from ..runner import run_cmd
-from .base import ToolContext, ToolNotInstalled, ToolOutput, finding, save_raw
+from .base import ToolContext, ToolNotInstalled, ToolOutput, finding, save_raw, proc_timeout
 
 TOOL = "httpx"
 
@@ -52,7 +52,7 @@ def parse(stdout: str, url: str) -> tuple[Stack, list]:
 async def run(ctx: ToolContext) -> ToolOutput:
     if not ctx.bin:
         raise ToolNotInstalled("ProjectDiscovery httpx not found (go install github.com/projectdiscovery/httpx/cmd/httpx@latest)")
-    res = await run_cmd(build_argv(ctx), timeout=ctx.opts["timeout"] - 2)
+    res = await run_cmd(build_argv(ctx), timeout=proc_timeout(ctx))
     save_raw(ctx, "httpx.jsonl", res.stdout)
     stack, findings = parse(res.stdout, ctx.target.url)
     if not stack.status_code and not res.timed_out:

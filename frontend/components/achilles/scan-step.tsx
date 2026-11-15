@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle, ArrowRight, Check, Clock, Loader2, Minus, Play, Square, XCircle } from 'lucide-react'
-import { api, ApiError } from '@/lib/api'
+import { AlertTriangle, ArrowRight, Check, Clock, Minus, Play, Square, XCircle } from 'lucide-react'
+import { api, ApiError, type ScanProfile } from '@/lib/api'
 import { demoScan } from '@/lib/demo-scan'
 import { TOOLS } from '@/lib/achilles-data'
 import { actionableCount } from '@/lib/insights'
 import { TERMINAL, type ScanResult, type ToolName, type ToolRun, type ToolStatus } from '@/lib/scan-types'
-import { btn, Notice, Panel, SampleTag } from './kit'
+import { btn, Notice, Panel, SampleTag, StepHeading } from './kit'
+import { GODS, GODS_BY_TOOL, type God } from '@/lib/pantheon'
+import { Pennant, type PennantState } from './motifs'
 import { cn } from '@/lib/utils'
 
 type LogLine = { text: string; kind: 'info' | 'flag' | 'done' }
@@ -60,10 +62,10 @@ function useDemoReplay(enabled: boolean): View {
     const real = demoScan.tools[k.key]
     tools[k.key] = t >= (real.duration_s ?? 0) ? real : { ...real, status: 'running', duration_s: null, message: '' }
   }
-  const log: LogLine[] = TOOLS.map((k) => ({ text: `${k.name}: started`, kind: 'info' as const }))
+  const log: LogLine[] = TOOLS.filter((k) => demoScan.tools[k.key].status !== 'skipped').map((k) => ({ text: `${k.name}: started`, kind: 'info' as const }))
   for (const k of [...TOOLS].sort((a, b) => (demoScan.tools[a.key].duration_s ?? 0) - (demoScan.tools[b.key].duration_s ?? 0))) {
     const run = tools[k.key]!
-    if (finished(run.status)) log.push({ text: `${k.name}: ${run.message} (${run.duration_s?.toFixed(1)}s)`, kind: run.findings_count ? 'flag' : 'info' })
+    if (finished(run.status)) log.push({ text: `${k.name}: ${run.message}${run.duration_s != null ? ` (${run.duration_s.toFixed(1)}s)` : ''}`, kind: run.findings_count ? 'flag' : 'info' })
   }
   const doneCount = TOOLS.filter((k) => finished(tools[k.key]?.status)).length
   const done = doneCount === TOOLS.length
@@ -81,9 +83,9 @@ function useDemoReplay(enabled: boolean): View {
 }
 
 /** Starts a real scan through the proxy and polls until it reaches a terminal state. */
-function useLiveScan(enabled: boolean, target: string): View & { cancel: () => Promise<void> } {
+function useLiveScan(enabled: boolean, target: string, profile: ScanProfile): View & { cancel: () => Promise<void> } {
   const [view, setView] = useState<View>({ ...EMPTY, log: [{ text: `Requesting a scan of ${target}`, kind: 'info' }] })
-  const startRef = useRef<Promise<{ scan_id: string }> | null>(null)
+  const startRef = useRef<Promise<{ scan_id: string; joined?: boolean }> | null>(null)
   const idRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -92,6 +94,7 @@ function useLiveScan(enabled: boolean, target: string): View & { cancel: () => P
     const seen: Partial<Record<ToolName, ToolStatus>> = {}
     let lastTotal = 0
     let failures = 0
+    let queuedLogged = false
 
     const fail = (e: unknown) => {
       const message = e instanceof Error ? e.message : 'The scan failed.'
@@ -105,10 +108,12 @@ function useLiveScan(enabled: boolean, target: string): View & { cancel: () => P
       let scanId: string
       try {
         // One start request per mount, even if React re-runs this effect (StrictMode in dev).
-        startRef.current ??= api.startScan(target, 'demo')
-        scanId = (await startRef.current).scan_id
+        startRef.current ??= api.startScan(target, profile)
+        const started = await startRef.current
+        scanId = started.scan_id
         idRef.current = scanId
-        setView((v) => (v.scanId ? v : { ...v, scanId, log: [...v.log, { text: `Scan ${scanId} accepted`, kind: 'info' }] }))
+        const accepted = started.joined ? `Joined scan ${scanId}, which was already in progress` : `Scan ${scanId} accepted`
+        setView((v) => (v.scanId ? v : { ...v, scanId, log: [...v.log, { text: accepted, kind: 'info' }] }))
       } catch (e) {
         return fail(e)
       }
@@ -117,6 +122,10 @@ function useLiveScan(enabled: boolean, target: string): View & { cancel: () => P
           const s = await api.status(scanId)
           failures = 0
           const lines = toolLines(seen, s.tools)
+          if (s.status === 'queued' && !queuedLogged) {
+            queuedLogged = true
+            lines.push({ text: `Waiting in line (position ${s.queue_position ?? 1}). Another scan is using the scanner.`, kind: 'flag' })
+          }
           const nonInfo = actionableCount(s)
           if (nonInfo > lastTotal) {
             lines.push({ text: `${nonInfo} finding${nonInfo === 1 ? '' : 's'} so far`, kind: 'flag' })
@@ -154,7 +163,7 @@ function useLiveScan(enabled: boolean, target: string): View & { cancel: () => P
     return () => {
       cancelled = true
     }
-  }, [enabled, target])
+  }, [enabled, target, profile])
 
   async function cancel() {
     if (!idRef.current) return
@@ -185,6 +194,7 @@ export function ScanStep({
   host,
   target,
   mode,
+  profile,
   scannerFake,
   onComplete,
   onBack,
@@ -193,13 +203,15 @@ export function ScanStep({
   host: string
   target: string
   mode: 'demo' | 'live'
+  profile: ScanProfile
   scannerFake: boolean
   onComplete: (result: ScanResult) => void
   onBack: () => void
   onUseDemo: () => void
 }) {
   const demo = useDemoReplay(mode === 'demo')
-  const live = useLiveScan(mode === 'live', target)
+  const live = useLiveScan(mode === 'live', target, profile)
+  const deep = mode === 'live' && profile === 'deep'
   const v = mode === 'demo' ? demo : live
   const active = !v.done && !v.error && !v.cancelled
   const elapsed = useElapsed(active)
@@ -210,27 +222,26 @@ export function ScanStep({
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' })
   }, [v.log.length])
 
-  const heading = v.error ? 'The scan could not finish' : v.cancelled ? 'Scan cancelled' : v.done ? 'Your report is ready' : "Mapping Your Application's Security"
+  const heading = v.error ? 'The trial was cut short' : v.cancelled ? 'The trial was called off' : v.done ? 'The trial is over' : 'The trial'
   const sub = v.error
-    ? v.error.message
+    ? `The scan could not finish. ${v.error.message}`
     : v.cancelled
-      ? 'No report was produced. You can start again whenever you like.'
+      ? 'Scan cancelled. No report was produced. You can start again whenever you like.'
       : v.done
-        ? `${v.flagged} actionable finding${v.flagged === 1 ? '' : 's'}${v.result?.status === 'partial' ? ' · some checks were cut short' : ''}.`
-        : 'ACHILLES is analyzing the supported attack surface and assembling your security findings.'
+        ? `Scan complete. ${v.flagged} actionable finding${v.flagged === 1 ? '' : 's'}${v.result?.status === 'partial' ? ' · some checks were cut short' : ''}.`
+        : v.queuePosition
+          ? `Waiting in line at position ${v.queuePosition}. Another scan is using the scanner, and this one starts when it finishes.`
+          : `${deep ? 'Deep scan' : 'Scan'} in progress. Achilles is running ${TOOLS.length} checks against ${host}.`
+
+  // One pennant per scanner, under the god it runs for. Ownership is already proven by this step, so it has no pennant.
+  const flags: Array<{ god: God; scanner: string; state: StageState }> = TOOLS.flatMap((t) =>
+    GODS_BY_TOOL[t.key].map((id) => ({ god: GODS[id], scanner: t.name, state: stageOf(v.tools[t.key]?.status) })),
+  )
 
   return (
     <div className="mx-auto max-w-5xl">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="flex items-start gap-4">
-          <Radar active={active} />
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-navy sm:text-3xl">{heading}</h1>
-            <p className="mt-1.5 max-w-xl text-muted-foreground" aria-live="polite">
-              {sub}
-            </p>
-          </div>
-        </div>
+        <StepHeading eyebrow="The gods at work" title={heading} plain={<span aria-live="polite">{sub}</span>} />
         {mode === 'demo' && <SampleTag className="self-start">Sample replay · canned data</SampleTag>}
       </div>
 
@@ -238,6 +249,21 @@ export function ScanStep({
         <Notice tone="warn" className="mt-6">
           <b>Scanner is in fake mode.</b> It returns canned results instead of running the real tools, so this report does
           not describe {host}.
+        </Notice>
+      )}
+
+      {active && v.queuePosition != null && (
+        <Notice tone="warn" className="mt-6">
+          <b>Not started yet.</b> The scanner runs a limited number of scans at a time and another one is ahead of this.
+          A deep scan ahead can take an hour or more. To stop a scan you started earlier, begin the same scan again to
+          rejoin it, then cancel it here.
+        </Notice>
+      )}
+
+      {deep && active && v.queuePosition == null && (
+        <Notice className="mt-6">
+          <b>Deep scan.</b> Every check runs until it finishes, which can take an hour or more. You can leave this page.
+          The scan keeps running, and the finished report shows up under earlier scans of {host}.
         </Notice>
       )}
 
@@ -260,20 +286,11 @@ export function ScanStep({
             <Stat label="Elapsed" value={`${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`} icon={Clock} />
             <Stat label="Actionable findings so far" value={String(v.flagged)} />
           </div>
-          <div
-            className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-surface-soft"
-            role="progressbar"
-            aria-valuenow={v.progress}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={`${doneCount} of ${TOOLS.length} checks finished`}
-          >
-            <div className="h-full rounded-full bg-gradient-to-r from-aegean to-teal transition-[width] duration-500" style={{ width: `${v.progress}%` }} />
-          </div>
+          <PennantRow progress={v.progress} flags={flags} label={`${doneCount} of ${TOOLS.length} checks finished`} />
 
           <div className="mt-6 grid gap-4 lg:grid-cols-[1.1fr_1fr]">
             <Panel className="p-5">
-              <h2 className="text-sm font-semibold text-navy">Stages</h2>
+              <h2 className="text-base font-semibold text-foreground">Stages</h2>
               <ol className="relative mt-4">
                 <Stage state="done" title="Ownership confirmed" detail={host} />
                 <Stage
@@ -287,7 +304,7 @@ export function ScanStep({
                   return (
                     <Stage
                       key={t.key}
-                      state={st === 'ok' ? 'done' : st === 'skipped' ? 'skipped' : st === 'running' ? 'active' : st === 'pending' ? 'pending' : 'warn'}
+                      state={stageOf(st)}
                       title={t.name}
                       detail={run?.message || t.checks}
                       meta={run?.duration_s != null ? `${run.duration_s.toFixed(1)}s` : st === 'running' ? 'running' : undefined}
@@ -296,21 +313,25 @@ export function ScanStep({
                 })}
                 <Stage last state={v.done ? 'done' : 'pending'} title="Report assembled" detail="Findings normalized, scored and explained" />
               </ol>
-              <p className="mt-3 text-xs text-muted-foreground">The five checks run in parallel, each with a hard time limit.</p>
+              <p className="mt-3 text-xs text-muted-foreground">
+                {deep
+                  ? `The ${TOOLS.length} checks run in parallel with no time limit. Cancel the scan to stop early.`
+                  : `The ${TOOLS.length} checks run in parallel, each with a hard time limit.`}
+              </p>
             </Panel>
 
             <Panel className="flex flex-col overflow-hidden p-0">
-              <div className="flex items-center justify-between border-b border-border bg-surface-soft/60 px-4 py-2.5 text-xs text-muted-foreground">
+              <div className="flex items-center justify-between border-b border-border px-4 py-2.5 text-xs text-muted-foreground">
                 <span className="truncate font-mono">event log · {host}</span>
                 <span className="flex items-center gap-1.5">
-                  <span className={cn('size-1.5 rounded-full', v.done ? 'bg-success' : 'animate-pulse bg-aegean')} aria-hidden="true" />
+                  <span className={cn('size-1.5 rounded-full', v.done ? 'bg-success' : 'animate-pulse bg-accent')} aria-hidden="true" />
                   {v.done ? 'Complete' : 'Live'}
                 </span>
               </div>
-              <div ref={logRef} className="h-80 overflow-y-auto bg-[#fbfdfe] p-4 font-mono text-xs leading-6" aria-label="Scan event log" tabIndex={0}>
+              <div ref={logRef} className="h-80 overflow-y-auto bg-background p-4 font-mono text-xs leading-6" aria-label="Scan event log" tabIndex={0}>
                 {v.log.map((line, i) => (
-                  <p key={i} className={cn(line.kind === 'flag' ? 'text-high' : line.kind === 'done' ? 'font-semibold text-success' : 'text-navy/80')}>
-                    <span className="text-gold-ink select-none">› </span>
+                  <p key={i} className={cn(line.kind === 'flag' ? 'text-high' : line.kind === 'done' ? 'font-semibold text-success' : 'text-foreground/90')}>
+                    <span className="text-accent select-none">› </span>
                     {line.text}
                   </p>
                 ))}
@@ -336,18 +357,45 @@ export function ScanStep({
   )
 }
 
-function Radar({ active }: { active: boolean }) {
+type StageState = 'done' | 'active' | 'pending' | 'warn' | 'skipped'
+
+const stageOf = (st: ToolStatus = 'pending'): StageState =>
+  st === 'ok' ? 'done' : st === 'skipped' ? 'skipped' : st === 'running' ? 'active' : st === 'pending' ? 'pending' : 'warn'
+
+const dot = (state: StageState) =>
+  cn(
+    'rounded-full border transition-colors duration-500',
+    state === 'done' && 'border-accent bg-accent',
+    state === 'active' && 'border-accent bg-background',
+    state === 'warn' && 'border-critical bg-critical',
+    (state === 'pending' || state === 'skipped') && 'border-line-strong bg-background',
+  )
+
+const PENNANT_STATE: Record<StageState, PennantState> = { done: 'done', active: 'running', pending: 'waiting', skipped: 'waiting', warn: 'warn' }
+const STATE_LABEL: Record<StageState, string> = { done: 'done', active: 'running', pending: 'waiting', skipped: 'skipped', warn: 'cut short' }
+
+/** One pennant per check: dimmed while waiting, full color while running, check-marked when done. The real scanner name sits under each. */
+function PennantRow({ progress, flags, label }: { progress: number; flags: Array<{ god: God; scanner: string; state: StageState }>; label: string }) {
   return (
-    <div className="relative size-14 shrink-0" aria-hidden="true">
-      <div className="absolute inset-0 rounded-full border border-aegean/25 bg-sky/50" />
-      <div className="absolute inset-[22%] rounded-full border border-aegean/30" />
-      <div className="absolute top-1/2 left-0 h-px w-full bg-aegean/15" />
-      <div className="absolute top-0 left-1/2 h-full w-px bg-aegean/15" />
-      {active && (
-        <div className="animate-sweep absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,transparent_75%,rgb(40_126_176/0.5))]" />
-      )}
-      <div className="absolute top-1/2 left-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold" />
-    </div>
+    <Panel className="mt-4 p-5">
+      <div role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label={label} className="h-1 w-full bg-surface-selected">
+        <div className="h-full bg-accent transition-[width] duration-500" style={{ width: `${progress}%` }} />
+      </div>
+      <ul className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(92px,1fr))] gap-x-2 gap-y-5">
+        {flags.map(({ god, scanner, state }) => (
+          <li key={scanner} className="flex flex-col items-center text-center">
+            <Pennant god={god} state={PENNANT_STATE[state]} />
+            <span className={cn('font-display mt-1 text-xs font-semibold tracking-[2px] uppercase', state === 'pending' || state === 'skipped' ? 'text-muted-foreground' : 'text-accent')}>{god.name}</span>
+            <span className="font-mono text-[11px] leading-tight text-muted-foreground">{scanner}</span>
+            {state === 'skipped' || state === 'warn' ? (
+              <span className={cn('text-[11px]', state === 'warn' ? 'text-critical' : 'text-muted-foreground')}>{STATE_LABEL[state]}</span>
+            ) : (
+              <span className="sr-only">: {STATE_LABEL[state]}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </Panel>
   )
 }
 
@@ -358,31 +406,30 @@ function Stat({ label, value, icon: Icon }: { label: string; value: string; icon
         {Icon && <Icon className="size-3.5" aria-hidden="true" />}
         {label}
       </p>
-      <p className="mt-1 text-xl font-semibold text-navy tabular-nums">{value}</p>
+      <p className="font-display mt-1 text-2xl font-semibold text-foreground tabular-nums">{value}</p>
     </Panel>
   )
 }
-
-type StageState = 'done' | 'active' | 'pending' | 'warn' | 'skipped'
 
 function Stage({ state, title, detail, meta, last }: { state: StageState; title: string; detail: string; meta?: string; last?: boolean }) {
   const label = { done: 'Complete', active: 'In progress', pending: 'Waiting', warn: 'Cut short', skipped: 'Skipped' }[state]
   return (
     <li className="relative grid grid-cols-[1.5rem_1fr_auto] gap-3 pb-4">
-      {!last && <span className="absolute top-6 bottom-0 left-3 w-px border-l border-dashed border-border" aria-hidden="true" />}
+      {!last && <span className="absolute top-6 bottom-0 left-3 w-px border-l-2 border-dotted border-line-dotted" aria-hidden="true" />}
       <span
         className={cn(
-          'relative z-10 flex size-6 items-center justify-center rounded-full border bg-white',
-          state === 'done' && 'border-success bg-success text-white',
-          state === 'active' && 'border-aegean text-aegean',
-          state === 'warn' && 'border-medium text-medium',
-          (state === 'pending' || state === 'skipped') && 'border-border text-muted-foreground',
+          dot(state),
+          'relative z-10 flex size-6 items-center justify-center',
+          state === 'done' && 'text-primary-foreground',
+          state === 'active' && 'text-accent',
+          state === 'warn' && 'text-primary-foreground',
+          (state === 'pending' || state === 'skipped') && 'text-muted-foreground',
         )}
       >
         {state === 'done' ? (
           <Check className="size-3.5" aria-hidden="true" />
         ) : state === 'active' ? (
-          <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+          <span className="size-2 animate-pulse rounded-full bg-accent" />
         ) : state === 'warn' ? (
           <AlertTriangle className="size-3" aria-hidden="true" />
         ) : state === 'skipped' ? (
@@ -393,7 +440,7 @@ function Stage({ state, title, detail, meta, last }: { state: StageState; title:
         <span className="sr-only">{label}</span>
       </span>
       <div className="min-w-0">
-        <p className={cn('text-sm font-medium', state === 'pending' ? 'text-muted-foreground' : 'text-navy')}>{title}</p>
+        <p className={cn('text-sm font-medium', state === 'pending' ? 'text-muted-foreground' : 'text-foreground')}>{title}</p>
         <p className="truncate text-xs text-muted-foreground" title={detail}>
           {detail}
         </p>

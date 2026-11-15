@@ -9,7 +9,7 @@ import re
 
 from ..runner import run_cmd
 from . import jsfetch
-from .base import ToolContext, ToolNotInstalled, ToolOutput, finding, save_raw
+from .base import ToolContext, ToolNotInstalled, ToolOutput, finding, save_raw, proc_timeout
 
 TOOL = "arjun"
 RISKY = re.compile(r"debug|admin|test|dev|role|is_?admin|superuser|token|secret|key|password|pass|auth|"
@@ -66,7 +66,7 @@ async def run(ctx: ToolContext) -> ToolOutput:
     ctx.raw_dir.mkdir(parents=True, exist_ok=True)
     urls_file, outfile = ctx.raw_dir / "arjun_urls.txt", ctx.raw_dir / "arjun.json"
     urls_file.write_text("\n".join(urls))
-    res = await run_cmd(build_argv(ctx, str(urls_file), str(outfile)), timeout=ctx.opts["timeout"] - 2,
+    res = await run_cmd(build_argv(ctx, str(urls_file), str(outfile)), timeout=proc_timeout(ctx),
                         env={"HOME": os.environ.get("HOME", "/root")})
     if res.stderr:
         save_raw(ctx, "arjun.stderr.txt", res.stderr)

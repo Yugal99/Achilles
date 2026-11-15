@@ -10,15 +10,11 @@ import {
   ExternalLink,
   FileText,
   Loader2,
-  MapPin,
-  Microscope,
   RotateCcw,
   Search,
-  Sparkles,
-  Wrench,
   XCircle,
 } from 'lucide-react'
-import { countBySeverity, severityMeta, SEVERITY_ORDER, toolName, type Finding, type Severity } from '@/lib/achilles-data'
+import { countBySeverity, cvssLabel, severityMeta, SEVERITY_ORDER, toolName, type Finding, type Severity } from '@/lib/achilles-data'
 import { securityScoreOf, toUiFindings, verdictOf } from '@/lib/fixes'
 import { categoryCounts, compareScans, formatWhen, PROVIDER_LABEL, type TipsState } from '@/lib/insights'
 import type { ScanResult, ScanStatusView } from '@/lib/scan-types'
@@ -26,18 +22,21 @@ import { ScanHistoryList } from './scan-history'
 import { CategoryBars, RiskTrend, SeverityDonut, ToolCoverage } from './charts'
 import { CopyButton } from './copy-button'
 import { ExportMenu } from './export-menu'
-import { btn, EmptyState, Notice, Panel, PanelTitle, SampleTag } from './kit'
+import { godFor } from '@/lib/pantheon'
+import { Bolt, Owl } from './god-icons'
+import { btn, chip, EmptyState, Eyebrow, field, Notice, Panel, PanelTitle, SampleTag } from './kit'
+import { MeanderBand } from './motifs'
 import { SeverityBadge } from './severity-badge'
 import { cn } from '@/lib/utils'
 
 export function ScoreRing({ score, size = 132, grade }: { score: number; size?: number; grade?: string }) {
   const r = 52
   const c = 2 * Math.PI * r
-  const tone = score >= 80 ? 'var(--success)' : score >= 50 ? 'var(--medium)' : 'var(--critical)'
+  const tone = score >= 80 ? 'var(--success)' : score >= 50 ? 'var(--accent)' : 'var(--critical)'
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg viewBox="0 0 120 120" className="-rotate-90" width={size} height={size} aria-hidden="true">
-        <circle cx="60" cy="60" r={r} fill="none" stroke="var(--surface-soft)" strokeWidth="8" />
+        <circle cx="60" cy="60" r={r} fill="none" stroke="var(--surface-selected)" strokeWidth="8" />
         <circle
           cx="60"
           cy="60"
@@ -52,7 +51,7 @@ export function ScoreRing({ score, size = 132, grade }: { score: number; size?: 
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-4xl font-semibold tracking-tight text-navy">{grade ?? score}</span>
+        <span className="font-display text-4xl font-semibold text-foreground">{grade ?? score}</span>
         <span className="text-[11px] text-muted-foreground">{grade ? `score ${score}/100` : 'of 100'}</span>
       </div>
     </div>
@@ -105,7 +104,6 @@ export function ResultsDashboard({
   const [sev, setSev] = useState<Severity | 'all'>('all')
   const [cat, setCat] = useState<string>('all')
   const [sort, setSort] = useState<Sort>('severity')
-  const [openId, setOpenId] = useState<string | null>(findings[0]?.id ?? null)
   const [selectedId, setSelectedId] = useState<string | null>(findings[0]?.id ?? null)
 
   const visible = useMemo(() => {
@@ -126,45 +124,63 @@ export function ResultsDashboard({
   const selected = findings.find((f) => f.id === selectedId) ?? findings[0] ?? null
   const select = (id: string) => {
     setSelectedId(id)
-    requestAnimationFrame(() => document.getElementById('oracle')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+    // On narrow screens the panel sits under the list, so bring it into view.
+    if (window.matchMedia('(max-width: 1023px)').matches)
+      requestAnimationFrame(() => document.getElementById('oracle')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
+
+  const n = findings.length
+  const heading = n === 0 ? 'No weak point found.' : `${NUMBER_WORDS[n] ?? n} weak point${n === 1 ? '' : 's'} found.`
+  const lead =
+    n === 0
+      ? 'These checks found no weaknesses. That covers only what these tools test. It is not a guarantee the app is secure.'
+      : counts.critical > 0
+        ? n === 1
+          ? 'It is the heel. Fix the critical finding first.'
+          : `${counts.critical === 1 ? 'One of them is' : `${counts.critical} of them are`} the heel. Start with the critical finding${counts.critical === 1 ? '' : 's'}, then work down.`
+        : 'None of them is critical. Work down from the most severe.'
 
   return (
     <div className="mx-auto max-w-6xl">
       {/* header */}
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
+          <Eyebrow>The reckoning</Eyebrow>
+          <h1 className="mt-4 text-4xl font-bold text-balance text-foreground sm:text-5xl">{heading}</h1>
+          <p className="mt-4 max-w-xl text-lg leading-relaxed text-muted-foreground">
+            {lead}
+            {mode === 'demo' && ' This is illustrative sample data.'}
+          </p>
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <span className={chip}>{scan.target.host}</span>
+            {mode === 'demo' && <SampleTag>Sample</SampleTag>}
             <StatusBadge status={scan.status} />
-            {mode === 'demo' && <SampleTag>Sample report · canned data</SampleTag>}
-            <span className="text-xs text-muted-foreground">Profile: {scan.profile}</span>
           </div>
-          <h1 className="mt-3 truncate text-3xl font-semibold tracking-tight text-navy sm:text-4xl">{scan.target.host}</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
+          <p className="mt-3 text-sm text-muted-foreground">
             Scanned {formatWhen(scan.finished_at ?? scan.created_at)}
-            {scan.duration_s ? ` · took ${Math.round(scan.duration_s)}s` : ''} · <span className="font-mono">{scan.scan_id}</span>
+            {scan.duration_s ? ` · took ${Math.round(scan.duration_s)}s` : ''} · profile {scan.profile} · <span className="font-mono">{scan.scan_id}</span>
           </p>
           {scan.stack.technologies.length > 0 && (
             <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Detected technologies">
               {scan.stack.technologies.map((t) => (
-                <li key={t} className="rounded-md border border-border bg-card px-2 py-0.5 text-xs text-navy">
+                <li key={t} className="rounded-sm border border-border px-2 py-0.5 text-xs text-muted-foreground">
                   {t}
                 </li>
               ))}
             </ul>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <button type="button" onClick={onRescan} className={btn.secondary}>
             <RotateCcw className="size-4" aria-hidden="true" /> Rescan
           </button>
           <button type="button" onClick={onOpenReport} className={btn.primary}>
-            <FileText className="size-4" aria-hidden="true" /> Open report deck
+            <FileText className="size-4" aria-hidden="true" /> Open full report
           </button>
         </div>
       </div>
 
-      <div className="mt-6 grid gap-3">
+      <div className="mt-6 grid gap-3 empty:hidden">
         {mode === 'live' && scannerFake && (
           <Notice tone="warn">
             <b>Canned results.</b> The scanner is running in fake mode, so these findings were not produced by scanning{' '}
@@ -180,18 +196,11 @@ export function ResultsDashboard({
         )}
       </div>
 
-      {/* summary */}
-      <section aria-label="Summary" className="mt-6 grid gap-4 lg:grid-cols-[1.15fr_2fr]">
-        <Panel className="flex items-center gap-5 p-5">
-          <ScoreRing score={securityScoreOf(scan)} grade={scan.summary.grade} />
-          <div>
-            <p className={cn('text-lg font-semibold', verdict.tone)}>{verdict.label}</p>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{verdict.text}</p>
-            <p className="mt-2 text-xs text-muted-foreground">Risk score {scan.summary.risk_score} (lower is better)</p>
-          </div>
-        </Panel>
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {SEVERITY_ORDER.map((s) => (
+      {/* severity tiles: click one to filter the list */}
+      <ul aria-label="Findings by severity" className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        {SEVERITY_ORDER.map((s) => {
+          const crit = s === 'critical'
+          return (
             <li key={s}>
               <button
                 type="button"
@@ -199,24 +208,101 @@ export function ResultsDashboard({
                   setSev(sev === s ? 'all' : s)
                   document.getElementById('findings')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                 }}
+                aria-pressed={sev === s}
                 aria-label={`${counts[s]} ${severityMeta[s].label} findings. Filter list`}
                 className={cn(
-                  'flex h-full w-full flex-col justify-between rounded-xl border bg-card p-4 text-left transition-[border-color,box-shadow] duration-150 hover:shadow-[0_8px_24px_-16px_rgb(16_42_67/0.4)]',
-                  sev === s ? 'border-aegean shadow-[0_0_0_3px_rgb(40_126_176/0.12)]' : 'border-border',
+                  'flex min-h-[116px] w-full items-center justify-between gap-3 rounded-sm border p-5 text-left transition-colors duration-150 sm:p-6',
+                  crit ? 'border-critical bg-critical text-primary-foreground' : 'border-border bg-card hover:border-line-strong',
+                  sev === s && (crit ? 'outline-2 outline-offset-2 outline-ink' : 'border-accent bg-surface-selected'),
                 )}
               >
-                <span className={cn('flex items-center gap-1.5 text-xs font-semibold', severityMeta[s].text)}>
-                  <span className={cn('size-2 rounded-full', severityMeta[s].bg)} aria-hidden="true" />
-                  {severityMeta[s].label}
+                <span>
+                  <span className={cn('block text-sm font-bold tracking-[1.5px] uppercase', !crit && severityMeta[s].text)}>{severityMeta[s].label}</span>
+                  <span className={cn('font-display mt-1 block text-5xl leading-none font-bold tabular-nums', !crit && 'text-foreground')}>{counts[s]}</span>
                 </span>
-                <span className="mt-4 text-3xl font-semibold text-navy tabular-nums">{counts[s]}</span>
+                {crit && <Bolt size={40} className="shrink-0" />}
               </button>
             </li>
-          ))}
-        </ul>
-      </section>
+          )
+        })}
+      </ul>
 
-      {/* charts */}
+      {/* findings list with the fix panel beside it */}
+      <div className="mt-10 grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        <section id="findings" aria-labelledby="findings-title" className="scroll-mt-28">
+          <h2 id="findings-title" className="text-xl font-semibold tracking-[2px] text-foreground">
+            Findings
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Showing {visible.length} of {findings.length}. Select one to see its fix.
+          </p>
+
+          <div className="mt-4 grid gap-3">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-muted-foreground">Search findings</span>
+              <span className="relative block">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Title, location or check" className={cn(field, 'pr-3 pl-9')} />
+              </span>
+            </label>
+            <div className="flex flex-wrap items-end gap-3">
+              <Select label="Severity" value={sev} onChange={(v) => setSev(v as Severity | 'all')} options={[['all', 'All severities'], ...SEVERITY_ORDER.map((s) => [s, severityMeta[s].label] as [string, string])]} />
+              <Select label="Category" value={cat} onChange={setCat} options={[['all', 'All categories'], ...cats.map((c) => [c.key, c.label] as [string, string])]} />
+              <Select
+                label="Sort"
+                icon
+                value={sort}
+                onChange={(v) => setSort(v as Sort)}
+                options={[
+                  ['severity', 'Most severe first'],
+                  ['category', 'Category'],
+                  ['title', 'Title A–Z'],
+                ]}
+              />
+            </div>
+          </div>
+
+          {findings.length === 0 ? (
+            <div className="mt-4">
+              <EmptyState icon={CheckCircle2} title="No weak point found." body="These checks found no weaknesses. That covers only what these tools test. It is not a guarantee the app is secure." />
+            </div>
+          ) : visible.length === 0 ? (
+            <div className="mt-4">
+              <EmptyState
+                title="No findings match these filters"
+                body={
+                  <button type="button" className="inline-flex min-h-12 items-center text-accent underline underline-offset-4" onClick={() => (setQuery(''), setSev('all'), setCat('all'))}>
+                    Clear filters
+                  </button>
+                }
+              />
+            </div>
+          ) : (
+            <ul className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-2.5">
+              {visible.map((f, i) => (
+                <FindingRow key={f.id} f={f} selected={selected?.id === f.id} isNew={!!diff?.added.some((a) => a.id === f.id)} delay={Math.min(i, 8) * 50} onSelect={() => select(f.id)} />
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {selected && <CounselPanel finding={selected} tipsState={tipsState} mode={mode} onRescan={onRescan} />}
+      </div>
+
+      {/* the rest of the report: grade, charts, comparison and history */}
+      <MeanderBand className="mt-14" />
+      <section aria-labelledby="details-title" className="mt-10">
+        <h2 id="details-title" className="text-xl font-semibold tracking-[2px] text-foreground">
+          Scan details
+        </h2>
+        <Panel className="mt-4 flex items-center gap-5 p-5">
+          <ScoreRing score={securityScoreOf(scan)} grade={scan.summary.grade} />
+          <div>
+            <p className={cn('text-lg font-semibold', verdict.tone)}>{verdict.label}</p>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{verdict.text}</p>
+            <p className="mt-2 text-xs text-muted-foreground">Risk score {scan.summary.risk_score} (lower is better)</p>
+          </div>
+        </Panel>
       <section aria-label="Charts" className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-3 [&>*]:min-w-0">
         <Panel className="p-5">
           <PanelTitle hint="All findings, including informational">Severity distribution</PanelTitle>
@@ -248,12 +334,12 @@ export function ResultsDashboard({
             {diff ? (
               <>
                 <dl className="grid grid-cols-3 gap-2 text-center">
-                  <Delta label="New" value={diff.added.length} tone="text-high" />
+                  <Delta label="New" value={diff.added.length} tone="text-critical" />
                   <Delta label="Not detected" value={diff.resolved.length} tone="text-success" />
-                  <Delta label="Persistent" value={diff.persistent.length} tone="text-navy" />
+                  <Delta label="Persistent" value={diff.persistent.length} tone="text-foreground" />
                 </dl>
                 {diff.unconfirmed.length > 0 && (
-                  <p className="mt-3 text-xs leading-relaxed text-medium">
+                  <p className="mt-3 text-xs leading-relaxed text-accent">
                     {diff.unconfirmed.length} earlier finding{diff.unconfirmed.length === 1 ? '' : 's'} weren&apos;t seen, but the
                     tool that found {diff.unconfirmed.length === 1 ? 'it' : 'them'} didn&apos;t finish this time, so they aren&apos;t counted
                     as resolved.
@@ -295,82 +381,7 @@ export function ResultsDashboard({
           </div>
         </Panel>
       )}
-
-      {/* findings */}
-      <section id="findings" aria-labelledby="findings-title" className="mt-10 scroll-mt-24">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 id="findings-title" className="text-xl font-semibold text-navy">
-              Security findings
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Showing {visible.length} of {findings.length}. Informational stack details are listed in the header.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-2 rounded-xl border border-border bg-card p-3 sm:grid-cols-[1fr_auto_auto_auto]">
-          <label className="relative block">
-            <span className="sr-only">Search findings</span>
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search title, location or check"
-              className="h-10 w-full rounded-lg border border-border bg-surface-soft/50 pr-3 pl-9 text-sm text-navy placeholder:text-[#8a9bab] focus:border-aegean focus:outline-none"
-            />
-          </label>
-          <Select label="Severity" value={sev} onChange={(v) => setSev(v as Severity | 'all')} options={[['all', 'All severities'], ...SEVERITY_ORDER.map((s) => [s, severityMeta[s].label] as [string, string])]} />
-          <Select label="Category" value={cat} onChange={setCat} options={[['all', 'All categories'], ...cats.map((c) => [c.key, c.label] as [string, string])]} />
-          <Select
-            label="Sort"
-            icon
-            value={sort}
-            onChange={(v) => setSort(v as Sort)}
-            options={[
-              ['severity', 'Most severe first'],
-              ['category', 'Category'],
-              ['title', 'Title A–Z'],
-            ]}
-          />
-        </div>
-
-        {findings.length === 0 ? (
-          <div className="mt-4">
-            <EmptyState icon={CheckCircle2} title="No weaknesses found by these checks" body="That covers only what the five tools test. It is not a guarantee the app is secure." />
-          </div>
-        ) : visible.length === 0 ? (
-          <div className="mt-4">
-            <EmptyState
-              title="No findings match these filters"
-              body={
-                <button type="button" className="text-primary underline underline-offset-4" onClick={() => (setQuery(''), setSev('all'), setCat('all'))}>
-                  Clear filters
-                </button>
-              }
-            />
-          </div>
-        ) : (
-          <ul className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-3">
-            {visible.map((f) => (
-              <FindingRow
-                key={f.id}
-                f={f}
-                open={openId === f.id}
-                isNew={!!diff?.added.some((a) => a.id === f.id)}
-                onToggle={() => setOpenId(openId === f.id ? null : f.id)}
-                onRemediate={() => select(f.id)}
-              />
-            ))}
-          </ul>
-        )}
       </section>
-
-      {/* oracle */}
-      {selected && (
-        <RemediationPanel finding={selected} findings={findings} tipsState={tipsState} mode={mode} onSelect={setSelectedId} />
-      )}
 
       <div className="mt-10 border-t border-border pt-6">
         <ExportMenu scan={scan} findings={findings} />
@@ -379,13 +390,15 @@ export function ResultsDashboard({
   )
 }
 
+const NUMBER_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty']
+
 function StatusBadge({ status }: { status: ScanResult['status'] }) {
   const ok = status === 'completed'
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-semibold',
-        ok ? 'border-success/30 bg-[#eef8f2] text-success' : 'border-medium/30 bg-[#fdf6e9] text-medium',
+        'inline-flex items-center gap-1.5 rounded-sm border px-2 py-0.5 text-xs font-semibold',
+        ok ? 'border-line-strong text-muted-foreground' : 'border-accent text-accent',
       )}
     >
       {ok ? <CheckCircle2 className="size-3.5" aria-hidden="true" /> : <CircleDashed className="size-3.5" aria-hidden="true" />}
@@ -396,8 +409,8 @@ function StatusBadge({ status }: { status: ScanResult['status'] }) {
 
 function Delta({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
-    <div className="rounded-lg border border-border bg-surface-soft/50 px-2 py-3">
-      <dd className={cn('text-2xl font-semibold tabular-nums', tone)}>{value}</dd>
+    <div className="rounded-md border border-border bg-background px-2 py-3">
+      <dd className={cn('font-display text-2xl font-semibold tabular-nums', tone)}>{value}</dd>
       <dt className="text-[11px] text-muted-foreground">{label}</dt>
     </div>
   )
@@ -417,24 +430,19 @@ function Select({
   icon?: boolean
 }) {
   return (
-    <label className="relative block">
-      <span className="sr-only">{label}</span>
-      {icon && <ArrowDownUp className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />}
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={cn(
-          'h-10 w-full appearance-none rounded-lg border border-border bg-card pr-8 text-sm text-navy focus:border-aegean focus:outline-none sm:w-auto',
-          icon ? 'pl-8' : 'pl-3',
-        )}
-      >
-        {options.map(([v, l]) => (
-          <option key={v} value={v}>
-            {l}
-          </option>
-        ))}
-      </select>
-      <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+    <label className="block">
+      <span className="mb-1 block text-xs font-medium text-muted-foreground">{label}</span>
+      <span className="relative block">
+        {icon && <ArrowDownUp className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />}
+        <select value={value} onChange={(e) => onChange(e.target.value)} className={cn(field, 'appearance-none pr-8 sm:w-auto', icon ? 'pl-8' : 'pl-3')}>
+          {options.map(([v, l]) => (
+            <option key={v} value={v}>
+              {l}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+      </span>
     </label>
   )
 }
@@ -442,81 +450,40 @@ function Select({
 function SourceTag({ source }: { source?: Finding['source'] }) {
   const ai = source && source !== 'rules'
   return (
-    <span className={cn('inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium', ai ? 'border-aegean/30 bg-sky/50 text-primary' : 'border-border bg-surface-soft text-muted-foreground')}>
+    <span className={cn('inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium', ai ? 'border-accent text-accent' : 'border-line-strong text-muted-foreground')}>
       {ai ? <Bot className="size-3" aria-hidden="true" /> : <FileText className="size-3" aria-hidden="true" />}
       {PROVIDER_LABEL[source ?? 'rules']}
     </span>
   )
 }
 
-function FindingRow({ f, open, isNew, onToggle, onRemediate }: { f: Finding; open: boolean; isNew: boolean; onToggle: () => void; onRemediate: () => void }) {
-  const r = f.raw
+function FindingRow({ f, selected, isNew, delay, onSelect }: { f: Finding; selected: boolean; isNew: boolean; delay: number; onSelect: () => void }) {
+  const god = godFor({ category: f.categoryKey, tool: f.raw.tool })
+  const Icon = god.icon
   return (
-    <li className={cn('rounded-xl border bg-card transition-[border-color,box-shadow] duration-150', open ? 'border-aegean/40 shadow-[0_10px_30px_-20px_rgb(16_42_67/0.45)]' : 'border-border hover:border-aegean/25')}>
-      <button type="button" onClick={onToggle} aria-expanded={open} aria-controls={`${f.id}-panel`} className="flex w-full items-start gap-3 p-4 text-left sm:items-center sm:p-5">
-        <span className={cn('mt-1.5 h-8 w-1 shrink-0 rounded-full sm:mt-0', severityMeta[f.severity].bg)} aria-hidden="true" />
-        <span className="min-w-0 flex-1">
-          <span className="flex flex-wrap items-center gap-2">
-            <SeverityBadge severity={f.severity} />
-            <span className="text-xs text-muted-foreground">{f.category}</span>
-            {isNew && <span className="rounded-md bg-high/10 px-1.5 py-0.5 text-[11px] font-semibold text-high">New</span>}
-          </span>
-          <span className="mt-1.5 block font-medium text-navy">{f.title}</span>
-          <span className="mt-0.5 block truncate font-mono text-xs text-muted-foreground">{f.location}</span>
+    <li className="animate-fade-up" style={{ animationDelay: `${delay}ms` }}>
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-pressed={selected}
+        className={cn(
+          'flex w-full items-center gap-4 rounded-sm border p-4 text-left transition-colors duration-150',
+          selected ? 'border-accent bg-surface-selected' : 'border-border bg-card hover:border-line-strong',
+        )}
+      >
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-sm border border-line-strong text-accent">
+          <Icon size={28} />
         </span>
-        <ChevronDown className={cn('mt-1 size-4 shrink-0 text-muted-foreground transition-transform duration-200 sm:mt-0', open && 'rotate-180')} aria-hidden="true" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold text-foreground">{f.title}</span>
+          <span className="mt-1 block font-mono text-xs tracking-wider text-muted-foreground">
+            <span className="uppercase">{god.name}</span> · {toolName(f.raw.tool)}
+            {isNew && <span className="ml-2 font-sans font-semibold tracking-normal text-critical">New</span>}
+          </span>
+        </span>
+        <SeverityBadge severity={f.severity} />
       </button>
-      {open && (
-        <div id={`${f.id}-panel`} className="animate-fade-up grid grid-cols-[minmax(0,1fr)] gap-4 border-t border-border p-4 sm:p-5 lg:grid-cols-3 [&>*]:min-w-0">
-          <Block icon={Microscope} title="Observed evidence" note={`Reported by ${toolName(r.tool)}`}>
-            <dl className="grid gap-2 text-sm">
-              <Row k="Check" v={<span className="font-mono text-xs">{r.check_id}</span>} />
-              <Row k="Location" v={<span className="font-mono text-xs break-all">{r.location || '—'}</span>} />
-              {r.evidence && <Row k="Evidence" v={<span className="font-mono text-xs break-all">{r.evidence}</span>} />}
-              {r.description && <Row k="Scanner note" v={r.description} />}
-            </dl>
-          </Block>
-          <Block icon={Sparkles} title="Interpretation" note={<SourceTag source={f.source} />}>
-            <p className="text-sm leading-relaxed text-navy">{f.summary}</p>
-            <p className="mt-3 text-xs font-semibold text-muted-foreground">Why it matters</p>
-            <p className="mt-1 text-sm leading-relaxed text-navy">{f.impact}</p>
-          </Block>
-          <Block icon={Wrench} title="Suggested fix" note="Review before applying">
-            {r.remediation && <p className="mb-3 text-sm leading-relaxed text-navy">{r.remediation}</p>}
-            <p className="line-clamp-4 text-sm leading-relaxed text-muted-foreground">{f.fixPrompt}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <CopyButton text={f.fixPrompt} label="Copy fix prompt" variant="solid" />
-              <button type="button" onClick={onRemediate} className={btn.ghost}>
-                Open in remediation
-              </button>
-            </div>
-          </Block>
-        </div>
-      )}
     </li>
-  )
-}
-
-function Block({ icon: Icon, title, note, children }: { icon: typeof Wrench; title: string; note?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border border-border bg-surface-soft/40 p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-navy uppercase">
-          <Icon className="size-3.5 text-primary" aria-hidden="true" /> {title}
-        </p>
-        {typeof note === 'string' ? <span className="text-[11px] text-muted-foreground">{note}</span> : note}
-      </div>
-      {children}
-    </div>
-  )
-}
-
-function Row({ k, v }: { k: string; v: React.ReactNode }) {
-  return (
-    <div>
-      <dt className="text-[11px] text-muted-foreground">{k}</dt>
-      <dd className="text-navy">{v}</dd>
-    </div>
   )
 }
 
@@ -527,117 +494,99 @@ const TARGETS = [
   { id: 'lovable', label: 'Lovable', suffix: '\n\nApply this to my Lovable project and summarize every file you changed.' },
 ] as const
 
-function RemediationPanel({
-  finding,
-  findings,
-  tipsState,
-  mode,
-  onSelect,
-}: {
-  finding: Finding
-  findings: Finding[]
-  tipsState: TipsState
-  mode: 'demo' | 'live'
-  onSelect: (id: string) => void
-}) {
+const label = 'text-xs font-bold tracking-[1.5px] text-foreground uppercase'
+
+function CounselPanel({ finding, tipsState, mode, onRescan }: { finding: Finding; tipsState: TipsState; mode: 'demo' | 'live'; onRescan: () => void }) {
   const [target, setTarget] = useState<(typeof TARGETS)[number]['id']>('generic')
   const t = TARGETS.find((x) => x.id === target)!
   const prompt = finding.fixPrompt + t.suffix
-  const refs = finding.raw.references.filter((u) => /^https?:\/\//.test(u))
+  const r = finding.raw
+  const refs = r.references.filter((u) => /^https?:\/\//.test(u))
 
   return (
-    <section id="oracle" aria-labelledby="oracle-title" className="mt-12 scroll-mt-24">
-      <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.14em] text-primary uppercase">
-        <span className="h-px w-6 bg-gold" aria-hidden="true" /> The Oracle
-      </p>
-      <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <h2 id="oracle-title" className="text-xl font-semibold text-navy">
-          AI-Powered Security Remediation
-        </h2>
-        <label className="relative block sm:w-80">
-          <span className="sr-only">Finding to remediate</span>
-          <select
-            value={finding.id}
-            onChange={(e) => onSelect(e.target.value)}
-            className="h-10 w-full appearance-none rounded-lg border border-border bg-card pr-8 pl-3 text-sm text-navy focus:border-aegean focus:outline-none"
-          >
-            {findings.map((f) => (
-              <option key={f.id} value={f.id}>
-                [{severityMeta[f.severity].label}] {f.title}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-        </label>
-      </div>
+    <section
+      id="oracle"
+      aria-labelledby="oracle-title"
+      className="scroll-mt-28 rounded-sm border border-border border-t-[3px] border-t-accent bg-card p-5 sm:p-6 lg:sticky lg:top-28 lg:max-h-[calc(100svh-8.5rem)] lg:overflow-y-auto"
+    >
+      <h2 id="oracle-title" className="flex items-center gap-3 text-sm font-semibold tracking-[3px] text-accent uppercase">
+        <Owl size={36} className="shrink-0" /> Counsel of Athena
+      </h2>
 
-      <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2 [&>*]:min-w-0">
-        <Panel className="p-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <SeverityBadge severity={finding.severity} />
-            <span className="text-xs text-muted-foreground">{finding.category}</span>
-          </div>
-          <h3 className="mt-2 text-lg font-semibold text-navy">{finding.title}</h3>
-          <p className="mt-2 flex items-start gap-1.5 font-mono text-xs break-all text-muted-foreground">
-            <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" /> {finding.location}
+      <div key={finding.id} className="animate-fade-up">
+        <div className="mt-5 flex items-start justify-between gap-3">
+          <h3 className="text-xl leading-snug font-semibold text-foreground">{finding.title}</h3>
+          <SeverityBadge severity={finding.severity} />
+        </div>
+
+        <p className={cn(label, 'mt-6')}>What it means</p>
+        <p className="mt-2 leading-relaxed text-muted-foreground">{finding.summary}</p>
+        <p className="mt-2 leading-relaxed text-muted-foreground">{finding.impact}</p>
+
+        <p className={cn(label, 'mt-6')}>Evidence</p>
+        <div className="mt-2 rounded-sm border border-border bg-background p-4 font-mono text-[13px] leading-relaxed break-all text-foreground">
+          <p>{finding.location || r.location}</p>
+          <p>{r.evidence || `${r.check_id} matched at this location`}</p>
+          {cvssLabel(r) && <p className="mt-2">{cvssLabel(r)}</p>}
+          <p className="mt-2 text-xs text-muted-foreground">
+            {r.check_id} · reported by {toolName(r.tool)}
           </p>
-          <div className="mt-4 rounded-lg border border-border bg-surface-soft/50 p-3">
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase">Evidence from {toolName(finding.raw.tool)}</p>
-            <p className="mt-1 font-mono text-xs break-all text-navy">{finding.raw.evidence || `${finding.raw.check_id} matched at this location`}</p>
-          </div>
-          <p className="mt-4 text-xs font-semibold text-muted-foreground uppercase">Explanation</p>
-          <p className="mt-1 text-sm leading-relaxed text-navy">{finding.summary}</p>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{finding.impact}</p>
-          {finding.raw.remediation && (
-            <>
-              <p className="mt-4 text-xs font-semibold text-muted-foreground uppercase">Scanner&apos;s suggested correction</p>
-              <p className="mt-1 text-sm leading-relaxed text-navy">{finding.raw.remediation}</p>
-            </>
-          )}
-        </Panel>
+        </div>
+        {r.description && <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{r.description}</p>}
+        {r.remediation && (
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            <span className="font-semibold text-foreground">Scanner&apos;s suggested correction: </span>
+            {r.remediation}
+          </p>
+        )}
 
-        <Panel className="flex flex-col p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-navy">Fix prompt</p>
-            <div role="radiogroup" aria-label="Format prompt for" className="flex flex-wrap gap-1 rounded-lg bg-surface-soft p-1">
-              {TARGETS.map((x) => (
-                <button
-                  key={x.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={target === x.id}
-                  onClick={() => setTarget(x.id)}
-                  className={cn('h-7 rounded-md px-2.5 text-xs font-medium transition-colors', target === x.id ? 'bg-white text-navy shadow-sm' : 'text-muted-foreground hover:text-navy')}
-                >
-                  {x.label}
-                </button>
-              ))}
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
+          <p className={label}>Fix prompt</p>
+          <SourceTag source={finding.source} />
+        </div>
+        <div role="radiogroup" aria-label="Format prompt for" className="mt-2 flex flex-wrap gap-1.5">
+          {TARGETS.map((x) => (
+            <button
+              key={x.id}
+              type="button"
+              role="radio"
+              aria-checked={target === x.id}
+              onClick={() => setTarget(x.id)}
+              className={cn(
+                'min-h-12 rounded-sm border px-3 text-xs font-semibold transition-colors',
+                target === x.id ? 'border-accent bg-surface-selected text-accent' : 'border-line-strong text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {x.label}
+            </button>
+          ))}
+        </div>
+        <pre className="mt-2 max-h-72 overflow-auto rounded-sm border border-dashed border-line-dotted p-4 font-sans text-[15px] leading-relaxed whitespace-pre-wrap text-foreground">{prompt}</pre>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <CopyButton text={prompt} label="Copy prompt" variant="solid" />
+          <button type="button" onClick={onRescan} className={btn.secondary}>
+            Rescan to confirm
+          </button>
+        </div>
+
+        <div className="mt-6 grid gap-4 border-t border-border pt-5">
+          <Attribution tipsState={tipsState} mode={mode} source={finding.source} />
+          {refs.length > 0 && (
+            <div>
+              <p className={label}>References from the scanner</p>
+              <ul className="mt-1.5 grid gap-1">
+                {refs.slice(0, 4).map((u) => (
+                  <li key={u}>
+                    <a href={u} target="_blank" rel="noreferrer noopener" className="inline-flex min-h-12 max-w-full items-center gap-1 truncate text-sm text-accent underline-offset-4 hover:underline">
+                      <ExternalLink className="size-3.5 shrink-0" aria-hidden="true" /> {u.replace(/^https?:\/\//, '')}
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
-          <pre className="mt-3 max-h-64 flex-1 overflow-auto rounded-lg border border-border bg-[#fbfdfe] p-4 font-sans text-sm leading-relaxed whitespace-pre-wrap text-navy">{prompt}</pre>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <SourceTag source={finding.source} />
-            <CopyButton text={prompt} label="Copy prompt" variant="solid" />
-          </div>
-
-          <div className="mt-5 grid gap-3 border-t border-border pt-4">
-            <Attribution tipsState={tipsState} mode={mode} source={finding.source} />
-            {refs.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase">References from the scanner</p>
-                <ul className="mt-1.5 grid gap-1">
-                  {refs.slice(0, 4).map((u) => (
-                    <li key={u}>
-                      <a href={u} target="_blank" rel="noreferrer noopener" className="inline-flex max-w-full items-center gap-1 truncate text-sm text-primary underline-offset-4 hover:underline">
-                        <ExternalLink className="size-3.5 shrink-0" aria-hidden="true" /> {u.replace(/^https?:\/\//, '')}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </Panel>
+          )}
+        </div>
       </div>
     </section>
   )
@@ -649,14 +598,14 @@ function Attribution({ tipsState, mode, source }: { tipsState: TipsState; mode: 
       {state === 'done' ? (
         <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />
       ) : state === 'active' ? (
-        <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-aegean" aria-hidden="true" />
+        <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-accent" aria-hidden="true" />
       ) : state === 'fail' ? (
-        <XCircle className="mt-0.5 size-4 shrink-0 text-medium" aria-hidden="true" />
+        <XCircle className="mt-0.5 size-4 shrink-0 text-critical" aria-hidden="true" />
       ) : (
         <CircleDashed className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       )}
       <span>
-        <span className="font-medium text-navy">{label}</span>
+        <span className="font-medium text-foreground">{label}</span>
         <span className="block text-xs text-muted-foreground">{detail}</span>
       </span>
     </li>
@@ -664,7 +613,7 @@ function Attribution({ tipsState, mode, source }: { tipsState: TipsState; mode: 
   const tips = tipsState.kind === 'ready' ? tipsState.tips : null
   return (
     <div>
-      <p className="text-xs font-semibold text-muted-foreground uppercase">How this fix was produced</p>
+      <p className={label}>How this fix was produced</p>
       <ol className="mt-2 grid gap-2.5">
         {mode === 'demo'
           ? step('Built-in rule library', 'done', 'The sample scan does not call any AI provider.')

@@ -95,7 +95,9 @@
       "evidence": "HTTP 200, 293 bytes; variables: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, OPENAI_API_KEY",
       "remediation": "Remove .env from the public/ or dist/ folder, add it to .gitignore, and rotate every secret it contained.",
       "references": [],
-      "tags": []
+      "tags": [],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "175cd1f30e84",
@@ -109,7 +111,9 @@
       "evidence": "sk-pro…stuv",
       "remediation": "Revoke the key at platform.openai.com, move OpenAI calls to a server/edge function, read the key from a server-side env var.",
       "references": [],
-      "tags": []
+      "tags": [],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "01f10f8668d3",
@@ -126,7 +130,9 @@
       "tags": [
         "secret",
         "openai-key"
-      ]
+      ],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "e56218e3fac1",
@@ -140,7 +146,9 @@
       "evidence": "eyJhbG…pbmc",
       "remediation": "Rotate the JWT secret / service key in Supabase now, use only the anon key in the browser, and do privileged work in an Edge Function.",
       "references": [],
-      "tags": []
+      "tags": [],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "c21189c8e878",
@@ -157,7 +165,9 @@
       "tags": [
         "secret",
         "supabase-service-role"
-      ]
+      ],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "9e4b61f15565",
@@ -171,7 +181,9 @@
       "evidence": "Origin: https://achilles-cors-probe.example -> ACAO: https://achilles-cors-probe.example, ACAC: true",
       "remediation": "Only allow your own front-end origin(s); never echo the Origin header back.",
       "references": [],
-      "tags": []
+      "tags": [],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "944ede723298",
@@ -185,7 +197,9 @@
       "evidence": "HTTP 200, 98 bytes",
       "remediation": "Block /.git in your web server or stop deploying the .git directory.",
       "references": [],
-      "tags": []
+      "tags": [],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "fee7224bf8b7",
@@ -201,7 +215,9 @@
       "references": [],
       "tags": [
         "cookies"
-      ]
+      ],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "24c5df7f59e0",
@@ -215,7 +231,9 @@
       "evidence": "",
       "remediation": "Serve the site over HTTPS and redirect HTTP to HTTPS.",
       "references": [],
-      "tags": []
+      "tags": [],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "22e6b04a0e37",
@@ -229,7 +247,9 @@
       "evidence": "",
       "remediation": "Disable production source maps (e.g. `build.sourcemap: false` in Vite, `productionBrowserSourceMaps: false` in Next.js).",
       "references": [],
-      "tags": []
+      "tags": [],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "723a6acfac54",
@@ -245,7 +265,9 @@
       "references": [],
       "tags": [
         "headers"
-      ]
+      ],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "e1ed100274ff",
@@ -261,7 +283,9 @@
       "references": [],
       "tags": [
         "headers"
-      ]
+      ],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "9d68c1633cc9",
@@ -279,7 +303,9 @@
         "port",
         "8000",
         "http-alt"
-      ]
+      ],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "2e0b0650b981",
@@ -296,7 +322,9 @@
       "tags": [
         "port",
         "8443"
-      ]
+      ],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "9897917e0d40",
@@ -313,7 +341,9 @@
       "tags": [
         "secret",
         "supabase-anon-key"
-      ]
+      ],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "be8f175b7cd9",
@@ -329,7 +359,9 @@
       "references": [],
       "tags": [
         "headers"
-      ]
+      ],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "b2cea2c63b54",
@@ -345,7 +377,9 @@
       "references": [],
       "tags": [
         "headers"
-      ]
+      ],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "26eeacc757bc",
@@ -361,7 +395,9 @@
       "references": [],
       "tags": [
         "headers"
-      ]
+      ],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "d1440f0ea09a",
@@ -377,7 +413,9 @@
       "references": [],
       "tags": [
         "headers"
-      ]
+      ],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "ee98c72631da",
@@ -394,7 +432,9 @@
       "tags": [
         "port",
         "8088"
-      ]
+      ],
+      "cvss_score": null,
+      "cvss_vector": ""
     },
     {
       "id": "79eb87dade0b",
@@ -410,7 +450,9 @@
       "references": [],
       "tags": [
         "tech"
-      ]
+      ],
+      "cvss_score": null,
+      "cvss_vector": ""
     }
   ],
   "summary": {

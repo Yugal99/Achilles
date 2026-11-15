@@ -9,11 +9,11 @@ import { cn } from '@/lib/utils'
 
 const OPENABLE = ['completed', 'partial']
 const GRADE_TONE: Record<string, string> = {
-  A: 'border-success/30 text-success',
-  B: 'border-success/30 text-success',
-  C: 'border-medium/30 text-medium',
-  D: 'border-high/30 text-high',
-  F: 'border-critical/30 text-critical',
+  A: 'border-success text-success',
+  B: 'border-success text-success',
+  C: 'border-medium text-medium',
+  D: 'border-high text-high',
+  F: 'border-critical text-critical',
 }
 
 /** A compact list of earlier scans of one host, each openable as a full report. */
@@ -51,10 +51,10 @@ export function ScanHistoryList({
           const ok = OPENABLE.includes(s.status)
           const b = s.summary.by_severity
           return (
-            <li key={s.scan_id} className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3', current && 'bg-sky/40')}>
+            <li key={s.scan_id} className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3', current && 'bg-surface-selected')}>
               <span
                 className={cn(
-                  'flex size-9 shrink-0 items-center justify-center rounded-lg border bg-card text-sm font-semibold',
+                  'font-display flex size-9 shrink-0 items-center justify-center rounded-md border bg-background text-sm font-semibold',
                   ok ? GRADE_TONE[s.summary.grade] : 'border-border text-muted-foreground',
                 )}
                 aria-label={ok ? `Grade ${s.summary.grade}` : s.status}
@@ -62,7 +62,7 @@ export function ScanHistoryList({
                 {ok ? s.summary.grade : '–'}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-navy">
+                <p className="text-sm font-medium text-foreground">
                   {formatWhen(s.finished_at ?? s.created_at)}
                   {current && <span className="ml-2 text-xs font-semibold text-primary">Viewing</span>}
                 </p>
@@ -86,7 +86,7 @@ export function ScanHistoryList({
                   type="button"
                   onClick={() => open(s.scan_id)}
                   disabled={!!opening}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs font-medium text-navy transition-colors hover:border-aegean/40 hover:bg-surface-soft disabled:opacity-50"
+                  className="inline-flex min-h-12 items-center gap-1.5 rounded-sm border border-accent px-4 text-sm font-semibold text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
                 >
                   {opening === s.scan_id ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : null}
                   View report
