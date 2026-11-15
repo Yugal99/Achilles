@@ -1,0 +1,96 @@
+# Achilles reverse proxy: HTTPS termination in front of the Next.js container on 127.0.0.1:3000.
+# Rendered by deploy/setup-https.sh (__DOMAIN__ and __UPSTREAM__ are replaced). Do not edit on the
+# server by hand: change this template and rerun the script.
+# TLS settings follow the Mozilla "intermediate" profile (TLS 1.2 + 1.3).
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+upstream achilles_web {
+    server __UPSTREAM__;
+    keepalive 16;
+}
+
+# --- Port 80: ACME HTTP-01 challenges, everything else -> HTTPS (301) ---
+server {
+    listen 80;
+    listen [::]:80;
+    server_name __DOMAIN__;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/letsencrypt;
+        default_type text/plain;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# --- Port 443: the site ---
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name __DOMAIN__;
+
+    ssl_certificate     /etc/letsencrypt/live/__DOMAIN__/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/__DOMAIN__/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_prefer_server_ciphers off;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:AchillesSSL:10m;
+    ssl_session_tickets off;
+    # No OCSP stapling: Let's Encrypt stopped running OCSP responders in 2025.
+
+    # HSTS lives in its own snippet so it can be switched on only after HTTPS is verified.
+    include /etc/nginx/snippets/achilles-hsts.conf;
+
+    client_max_body_size 2m;
+
+    location / {
+        proxy_pass http://achilles_web;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host  $host;
+
+        # Not used today (progress is polling), but keeps WebSockets/streaming working if added.
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+
+        proxy_connect_timeout 10s;
+        proxy_send_timeout    120s;
+        proxy_read_timeout    120s;
+    }
+}
+
+# --- Catch-all: requests by bare IP or unknown Host names get nothing ---
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/letsencrypt;
+        default_type text/plain;
+    }
+
+    location / {
+        return 444;
+    }
+}
+
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+    ssl_reject_handshake on;
+}

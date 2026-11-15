@@ -1,5 +1,8 @@
 # Domain setup (GoDaddy) and running Achilles
 
+> **Current production setup** (Docker + Nginx + Let's Encrypt on the Vultr VPS, DNS at Porkbun) is documented in
+> [`deploy/README.md`](../deploy/README.md). The Caddy notes below are an alternative that is not deployed.
+
 This needs your GoDaddy login, so it can't be automated from the repo. Do these steps once.
 
 ## 1. Pick where it runs

@@ -1,0 +1,5 @@
+# Shell scripts, nginx config and Docker files run on Linux: always LF.
+*.sh text eol=lf
+deploy/** text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
