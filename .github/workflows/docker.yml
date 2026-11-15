@@ -114,12 +114,15 @@ jobs:
         env:
           HOST: ${{ secrets.VULTR_HOST }}
           USER: ${{ secrets.VULTR_USER }}
+          HUB_USER: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
           TAG="sha-${GITHUB_SHA::7}"
+          # Shell variables override the server's .env, so it runs exactly the images this run pushed.
+          RUN="DOCKERHUB_USER=$HUB_USER ACHILLES_TAG=$TAG"
           scp -i ~/.ssh/deploy_key docker-compose.yml "$USER@$HOST:/opt/achilles/docker-compose.yml"
           ssh -i ~/.ssh/deploy_key "$USER@$HOST" "cd /opt/achilles \
-            && ACHILLES_TAG=$TAG docker compose pull \
-            && ACHILLES_TAG=$TAG docker compose up -d --remove-orphans \
+            && $RUN docker compose pull \
+            && $RUN docker compose up -d --remove-orphans \
             && docker image prune -f"
 
       - name: Health check
