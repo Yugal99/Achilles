@@ -16,24 +16,30 @@ PROFILES: dict[str, dict] = {
             "nmap":    {"timeout": 75, "ports": FOCUSED_PORTS, "host_timeout": "70s"},
             "httpx":   {"timeout": 25},
             "nuclei":  {"timeout": 100, "tags": "achilles,exposure,config,misconfig,cors,debug,panel,token,keys,"
-                                                "firebase,supabase,env,git,backup,logs",
+                                                "firebase,supabase,env,git,backup,logs,takeover,swagger,graphql",
                         "severity": "low,medium,high,critical", "rate_limit": 150, "concurrency": 25},
             "testssl": {"timeout": 100, "args": ["-p", "-S"]},
             "jscheck": {"timeout": 60, "max_scripts": 25},
+            "trufflehog": {"timeout": 40, "max_scripts": 25},
+            "retire":  {"timeout": 40, "max_scripts": 25},
+            "arjun":   {"timeout": 5, "skip": "demo profile skips parameter discovery (too slow for 2 min)"},
         },
     },
     "web": {
         "description": "Hosted web apps on shared infrastructure (Railway, Vercel...). No port scan: "
-                       "only httpx, Nuclei, testssl.sh and the JS key/header checker, at a gentle request rate.",
+                       "httpx, Nuclei, testssl.sh, the JS key/header checker, TruffleHog, Retire.js and Arjun, at a gentle request rate.",
         "deadline_s": 110,
         "tools": {
             "nmap":    {"timeout": 5, "skip": "web profile never port-scans (shared hosting)"},
             "httpx":   {"timeout": 25},
             "nuclei":  {"timeout": 100, "tags": "achilles,exposure,config,misconfig,cors,debug,panel,token,keys,"
-                                                "firebase,supabase,env,git,backup,logs",
+                                                "firebase,supabase,env,git,backup,logs,takeover,swagger,graphql",
                         "severity": "low,medium,high,critical", "rate_limit": 50, "concurrency": 10},
             "testssl": {"timeout": 100, "args": ["-p", "-S"]},
             "jscheck": {"timeout": 60, "max_scripts": 25},
+            "trufflehog": {"timeout": 40, "max_scripts": 25},
+            "retire":  {"timeout": 40, "max_scripts": 25},
+            "arjun":   {"timeout": 100, "max_scripts": 25, "max_api": 4, "threads": 1, "delay": 0.5},
         },
     },
     "standard": {
@@ -46,6 +52,9 @@ PROFILES: dict[str, dict] = {
                         "rate_limit": 150, "concurrency": 25},
             "testssl": {"timeout": 420, "args": ["-p", "-S", "-P", "-U"]},
             "jscheck": {"timeout": 120, "max_scripts": 60},
+            "trufflehog": {"timeout": 120, "max_scripts": 60},
+            "retire":  {"timeout": 120, "max_scripts": 60},
+            "arjun":   {"timeout": 420, "max_scripts": 60, "max_api": 5, "threads": 2, "delay": 0.2},
         },
     },
     "deep": {
@@ -58,8 +67,11 @@ PROFILES: dict[str, dict] = {
                         "rate_limit": 150, "concurrency": 25},
             "testssl": {"timeout": 900, "args": []},
             "jscheck": {"timeout": 180, "max_scripts": 120},
+            "trufflehog": {"timeout": 240, "max_scripts": 120},
+            "retire":  {"timeout": 240, "max_scripts": 120},
+            "arjun":   {"timeout": 1200, "max_scripts": 120, "max_api": 8, "threads": 3, "delay": 0.1},
         },
     },
 }
 
-TOOL_NAMES = ["nmap", "httpx", "nuclei", "testssl", "jscheck"]
+TOOL_NAMES = ["nmap", "httpx", "nuclei", "testssl", "jscheck", "trufflehog", "retire", "arjun"]

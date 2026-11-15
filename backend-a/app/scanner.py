@@ -1,7 +1,7 @@
 """Job queue + scan orchestration.
 
 - Scans wait in an asyncio queue; ACHILLES_MAX_CONCURRENT_SCANS workers pull from it.
-- Inside a scan, all five tools run in parallel, each with its own timeout from the profile.
+- Inside a scan, all tools run in parallel, each with its own timeout from the profile.
 - A profile-wide deadline cuts whatever is still running, so the demo always returns in time.
 - A tool that times out / errors / is missing never fails the scan: the scan ends "partial".
 - State is written to data/scans/<id>.json after every change, so restarts keep history.
@@ -23,13 +23,15 @@ from .config import settings
 from .models import (SEVERITY_ORDER, ScanResult, ScanStatus, Stack, Target, ToolRun, ToolStatus,
                      now, summarize)
 from .profiles import PROFILES, TOOL_NAMES
-from .tools import httpx_probe, jscheck, nmap, nuclei, testssl
+from .tools import arjun, httpx_probe, jscheck, nmap, nuclei, retire, testssl, trufflehog
 from .tools.base import ToolContext, ToolNotInstalled, ToolOutput, ToolSkipped
 
 log = logging.getLogger("achilles.scanner")
 
-TOOL_MODULES = {"nmap": nmap, "httpx": httpx_probe, "nuclei": nuclei, "testssl": testssl, "jscheck": jscheck}
-BIN_KEY = {"nmap": "nmap", "httpx": "httpx", "nuclei": "nuclei", "testssl": "testssl", "jscheck": None}
+TOOL_MODULES = {"nmap": nmap, "httpx": httpx_probe, "nuclei": nuclei, "testssl": testssl, "jscheck": jscheck,
+                "trufflehog": trufflehog, "retire": retire, "arjun": arjun}
+BIN_KEY = {"nmap": "nmap", "httpx": "httpx", "nuclei": "nuclei", "testssl": "testssl", "jscheck": None,
+           "trufflehog": "trufflehog", "retire": "retire", "arjun": "arjun"}
 
 
 class QueueFull(Exception):
@@ -308,14 +310,21 @@ def _merge_stack(a: Stack, b: Stack) -> Stack:
 
 
 def _dedupe(findings: list) -> list:
-    """The same exposed file can be reported by nuclei and jscheck; keep the most severe one."""
+    """The same exposed file can be reported by nuclei and jscheck, and the same leaked key by jscheck and
+    trufflehog (masked evidence is identical); keep the most severe one, preferring trufflehog's verified hit."""
     keep: dict[tuple, object] = {}
     rest = []
+    rank = lambda f: (SEVERITY_ORDER[f.severity.value], f.tool != "trufflehog")
     for f in findings:
         if f.category.value in ("exposed_file",):
             k = (f.category.value, f.location.rstrip("/").lower())
+        elif f.category.value == "exposed_secret" and f.evidence:
+            k = (f.category.value, f.location, f.evidence.split(" (")[0])
+        else:
+            k = None
+        if k:
             cur = keep.get(k)
-            if cur is None or SEVERITY_ORDER[f.severity.value] < SEVERITY_ORDER[cur.severity.value]:
+            if cur is None or rank(f) < rank(cur):
                 keep[k] = f
         else:
             rest.append(f)

@@ -48,6 +48,9 @@ class Settings:
             "httpx": _env("HTTPX_BIN", "") or _which("httpx-toolkit", "pd-httpx"),
             "nuclei": _env("NUCLEI_BIN", "") or _which("nuclei"),
             "testssl": _env("TESTSSL_BIN", "") or _which("testssl", "testssl.sh"),
+            "trufflehog": _env("TRUFFLEHOG_BIN", "") or _which("trufflehog"),
+            "retire": _env("RETIRE_BIN", "") or _which("retire"),
+            "arjun": _env("ARJUN_BIN", "") or _which("arjun") or _venv_bin("arjun"),
         }
         if not self.bins["httpx"]:
             cand = _which("httpx")
@@ -61,6 +64,12 @@ def _which(*names: str) -> str:
         if p:
             return p
     return ""
+
+
+def _venv_bin(name: str) -> str:
+    """pip-installed tools live in the project's .venv/bin, which isn't on PATH when run.sh uses it by path."""
+    p = Path(__file__).resolve().parent.parent / ".venv" / "bin" / name
+    return str(p) if p.is_file() else ""
 
 
 def _is_pd_httpx(path: str) -> bool:
