@@ -368,19 +368,34 @@ def _lock_for(scan_id: str) -> threading.Lock:
         return _locks.setdefault(scan_id, threading.Lock())
 
 
-def get_tips(scan: ScanResult, cache_dir, refresh: bool = False, post: Optional[Poster] = None) -> dict[str, Any]:
-    """Cached per scan. A rules-only result is not cached if a provider is configured, so keys added later are used."""
+def _usable(cached: Optional[dict[str, Any]]) -> bool:
+    return bool(cached) and cached.get("version") == TIPS_VERSION and (
+        cached.get("source") != "rules" or not configured_providers())
+
+
+def get_tips(scan: ScanResult, cache_dir, refresh: bool = False, post: Optional[Poster] = None, db=None) -> dict[str, Any]:
+    """Cached per scan (local file, plus MongoDB when `db` is given). A rules-only result is not reused if a
+    provider is configured, so keys added later are used."""
     cache_dir.mkdir(parents=True, exist_ok=True)
     path = cache_dir / f"{scan.scan_id}.json"
     with _lock_for(scan.scan_id):
         if path.exists() and not refresh:
             try:
                 cached = json.loads(path.read_text())
-                if cached.get("version") == TIPS_VERSION and (cached.get("source") != "rules" or not configured_providers()):
+                if _usable(cached):
                     return cached
             except (ValueError, OSError):
                 pass
+        if db is not None and not refresh:
+            try:
+                cached = db.get_tips(scan.scan_id)
+                if _usable(cached):
+                    return cached
+            except Exception as e:
+                log.warning("mongo tips lookup failed: %s", type(e).__name__)
         res = build_tips(scan, post)
+        if db is not None:
+            db.save_tips(scan.scan_id, res)
         try:
             path.write_text(json.dumps(res, indent=2))
         except OSError:

@@ -5,6 +5,8 @@
 - A profile-wide deadline cuts whatever is still running, so the demo always returns in time.
 - A tool that times out / errors / is missing never fails the scan: the scan ends "partial".
 - State is written to data/scans/<id>.json after every change, so restarts keep history.
+- With ACHILLES_MONGODB_URI set, every change is also upserted to MongoDB (see store.py), and history
+  is loaded from there at startup, so it survives a new machine.
 """
 from __future__ import annotations
 
@@ -16,7 +18,7 @@ import shutil
 import time
 from pathlib import Path
 
-from . import fake
+from . import fake, store as store_mod
 from .config import settings
 from .models import (SEVERITY_ORDER, ScanResult, ScanStatus, Stack, Target, ToolRun, ToolStatus,
                      now, summarize)
@@ -43,6 +45,7 @@ class ScanManager:
         self.workers: list[asyncio.Task] = []
         self.scans_dir = settings.data_dir / "scans"
         self.raw_root = settings.data_dir / "raw"
+        self.db: store_mod.MongoStore | None = None
 
     # --- lifecycle --------------------------------------------------------------
     async def start(self) -> None:
@@ -51,7 +54,10 @@ class ScanManager:
         self.waiting, self.tasks, self.workers = [], {}, []
         self.scans_dir.mkdir(parents=True, exist_ok=True)
         self.raw_root.mkdir(parents=True, exist_ok=True)
+        self.db = await asyncio.to_thread(store_mod.connect)
         self._load()
+        if self.db:
+            await asyncio.to_thread(self._load_db)
         self._purge_old_raw()
         for i in range(max(1, settings.max_concurrent_scans)):
             self.workers.append(asyncio.create_task(self._worker(i), name=f"scan-worker-{i}"))
@@ -60,6 +66,9 @@ class ScanManager:
         for t in list(self.tasks.values()) + self.workers:
             t.cancel()
         await asyncio.gather(*self.workers, *self.tasks.values(), return_exceptions=True)
+        if self.db:
+            await asyncio.to_thread(self.db.close)
+            self.db = None
 
     def _load(self) -> None:
         for p in sorted(self.scans_dir.glob("*.json")):
@@ -70,6 +79,16 @@ class ScanManager:
             if s.status in (ScanStatus.queued, ScanStatus.running):  # interrupted by a restart
                 s.status = ScanStatus.failed
                 s.error = "scanner restarted while this scan was in progress"
+            self.scans[s.scan_id] = s
+
+    def _load_db(self) -> None:
+        """Bring in history from MongoDB (the durable copy). Local files win for scans this host is running."""
+        for s in self.db.load_recent(500):
+            if s.scan_id in self.scans:
+                continue
+            if s.status in (ScanStatus.queued, ScanStatus.running):  # another instance's, or interrupted
+                s.status = ScanStatus.failed
+                s.error = s.error or "scanner restarted while this scan was in progress"
             self.scans[s.scan_id] = s
 
     def _purge_old_raw(self) -> None:
@@ -83,6 +102,8 @@ class ScanManager:
         tmp = p.with_suffix(".tmp")
         tmp.write_text(s.model_dump_json(indent=2))
         tmp.replace(p)
+        if self.db:
+            self.db.save_scan(s)
 
     # --- public API -----------------------------------------------------------
     def submit(self, target: Target, profile: str) -> ScanResult:
@@ -99,7 +120,26 @@ class ScanManager:
         return s
 
     def get(self, scan_id: str) -> ScanResult | None:
-        return self.scans.get(scan_id)
+        s = self.scans.get(scan_id)
+        if s is None and self.db:  # older than the startup window, or written by another instance
+            s = self.db.get_scan(scan_id)
+            if s and s.status not in (ScanStatus.queued, ScanStatus.running):
+                self.scans[s.scan_id] = s
+        return s
+
+    def for_host(self, host: str, limit: int = 20) -> list[ScanResult]:
+        """Scans of one host, newest first. MongoDB when configured (complete history), else memory."""
+        if self.db:
+            try:
+                found = {s.scan_id: s for s in self.db.host_scans(host, limit)}
+                for s in self.scans.values():  # include in-flight scans not yet flushed
+                    if s.target.host == host:
+                        found[s.scan_id] = s
+                return sorted(found.values(), key=lambda s: s.created_at, reverse=True)[:limit]
+            except Exception as e:
+                log.warning("mongo history query failed (%s); falling back to memory", type(e).__name__)
+        return sorted((s for s in self.scans.values() if s.target.host == host),
+                      key=lambda s: s.created_at, reverse=True)[:limit]
 
     def list(self, limit: int = 50) -> list[ScanResult]:
         return sorted(self.scans.values(), key=lambda s: s.created_at, reverse=True)[:limit]

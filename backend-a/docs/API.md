@@ -168,6 +168,16 @@ Setting a provider key sends finding titles, locations and masked evidence to th
 
 List of status objects (same shape as `GET /scans/{id}`), newest first.
 
+### `GET /api/v1/hosts/{host}/scans`: history for one app
+
+Status views (same shape as polling, no findings) for every stored scan of `host`, newest first, up to 20.
+Only answers for hosts whose ownership is currently verified (or lab targets); otherwise `403 ownership_not_verified`,
+so nobody can browse the history of an app they don't control. Fetch `/scans/{id}/results` for any entry to open it.
+
+History is durable when `ACHILLES_MONGODB_URI` is set: every scan and its tips are upserted into MongoDB
+(collections `scans` and `tips`, `_id` = scan id), and recent scans are loaded from there at startup.
+`GET /api/v1/health` reports `"storage": "mongodb"` or `"files"`.
+
 ### `DELETE /api/v1/scans/{scan_id}`
 
 Cancels a queued or running scan (tool processes are killed). `{"scan_id": "...", "cancelled": true}`.

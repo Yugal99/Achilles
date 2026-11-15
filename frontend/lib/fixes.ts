@@ -2,7 +2,7 @@
 // Rule table first (check_id / category), then a generic card built from the scanner's own text.
 // It only ever explains findings the tools actually produced.
 import type { ApiFinding, ApiSeverity, ScanResult, TipsResponse } from './scan-types'
-import type { Finding, Severity } from './achilles-data'
+import { categoryLabel, type Finding, type Severity } from './achilles-data'
 
 type Rule = {
   match: (f: ApiFinding) => boolean
@@ -164,11 +164,13 @@ export function explainFinding(f: ApiFinding): Finding | null {
     title: f.title,
     epithet: rule.epithet,
     severity,
-    category: f.category.replace(/_/g, ' '),
+    category: categoryLabel(f.category),
+    categoryKey: f.category,
     location: f.location,
     summary: f.description && !RULES.find((r) => r.match(f)) ? f.description : rule.summary,
     impact: rule.impact,
     fixPrompt: rule.fixPrompt(f),
+    raw: f,
   }
 }
 
@@ -206,5 +208,5 @@ export function verdictOf(scan: ScanResult) {
   if (s.high > 0) return { label: 'At risk', tone: 'text-high', text: 'High-risk openings need attention before you share this app widely.' }
   if (s.medium > 0) return { label: 'Needs hardening', tone: 'text-medium', text: 'No serious holes, but several worthwhile fixes remain.' }
   if (s.low > 0) return { label: 'Mostly sound', tone: 'text-low', text: 'Only small issues left to tidy up.' }
-  return { label: 'Strong', tone: 'text-gold', text: 'No weaknesses found by these checks.' }
+  return { label: 'Strong', tone: 'text-success', text: 'No weaknesses found by these checks.' }
 }

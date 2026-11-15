@@ -38,6 +38,9 @@ class Settings:
         # Ownership proof stays valid this long.
         self.ownership_ttl_s = int(_env("OWNERSHIP_TTL_S", str(24 * 3600)))
         self.raw_retention_days = int(_env("RAW_RETENTION_DAYS", "7"))
+        # Optional durable history in MongoDB (e.g. Atlas). Empty = local JSON files only.
+        self.mongodb_uri = _env("MONGODB_URI", "").strip()
+        self.mongodb_db = _env("MONGODB_DB", "achilles").strip() or "achilles"
 
         self.bins = {
             "nmap": _env("NMAP_BIN", "") or _which("nmap"),

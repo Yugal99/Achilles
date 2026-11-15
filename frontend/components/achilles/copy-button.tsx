@@ -4,7 +4,17 @@ import { useState } from 'react'
 import { Check, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export function CopyButton({ text, label = 'Copy', className }: { text: string; label?: string; className?: string }) {
+export function CopyButton({
+  text,
+  label = 'Copy',
+  className,
+  variant = 'outline',
+}: {
+  text: string
+  label?: string
+  className?: string
+  variant?: 'outline' | 'solid'
+}) {
   const [copied, setCopied] = useState(false)
 
   async function copy() {
@@ -27,7 +37,10 @@ export function CopyButton({ text, label = 'Copy', className }: { text: string; 
       type="button"
       onClick={copy}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-md border border-gold/40 px-3 py-1.5 text-xs font-medium text-gold transition-colors hover:bg-gold hover:text-primary-foreground',
+        'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors duration-150',
+        variant === 'outline' && 'border border-border bg-card text-navy hover:border-aegean/40 hover:bg-surface-soft',
+        variant === 'solid' && 'bg-primary text-primary-foreground hover:bg-[#195d87]',
+        copied && variant === 'outline' && 'border-success/40 text-success',
         className,
       )}
     >
