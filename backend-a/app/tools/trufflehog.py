@@ -52,7 +52,7 @@ def parse(stdout: str, files: dict[str, str], fallback_url: str) -> list:
 
 async def run(ctx: ToolContext) -> ToolOutput:
     if not ctx.bin:
-        raise ToolNotInstalled("trufflehog not found (see setup_fedora.sh, or https://github.com/trufflesecurity/trufflehog)")
+        raise ToolNotInstalled("trufflehog not found (run setup_ubuntu.sh or setup_fedora.sh, or https://github.com/trufflesecurity/trufflehog)")
     if os.environ.get("ACHILLES_TRUFFLEHOG_VERIFY", "1") == "0":
         raise ToolSkipped("secret verification disabled (ACHILLES_TRUFFLEHOG_VERIFY=0)")
     bundle = await jsfetch.get_bundle(ctx)
