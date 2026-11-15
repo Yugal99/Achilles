@@ -33,7 +33,7 @@ export function AchillesApp() {
   const [step, setStep] = useState<Step>('landing')
   const [host, setHost] = useState(DEMO_HOST)
   const [target, setTarget] = useState(`https://${DEMO_HOST}`)
-  const [mode, setMode] = useState<Mode>('demo')
+  const [mode, setMode] = useState<Mode>('live')
   const [scan, setScan] = useState<ScanResult | null>(null)
   const [scanKey, setScanKey] = useState(0)
   const [tipsState, setTipsState] = useState<TipsState>({ kind: 'idle' })
