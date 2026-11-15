@@ -50,7 +50,8 @@ def test_full_scan_flow():
         assert res["findings"][0]["severity"] == "critical"  # sorted most severe first
         assert res["summary"]["total"] == len(res["findings"])
         assert "Supabase" in res["stack"]["technologies"]
-        assert {t["status"] for t in res["tools"].values()} == {"ok"}
+        assert {t["status"] for t in res["tools"].values()} <= {"ok", "skipped"}  # demo skips arjun (too slow)
+        assert res["tools"]["trufflehog"]["status"] == "ok" and res["tools"]["retire"]["status"] == "ok"
         assert any(x["scan_id"] == sid for x in c.get("/api/v1/scans", headers=H).json())
 
 

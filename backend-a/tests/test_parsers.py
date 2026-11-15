@@ -1,7 +1,7 @@
 """Parser tests with sample tool output, so they run without the scanner tools installed."""
 import json
 
-from app.tools import httpx_probe, nmap, nuclei, testssl
+from app.tools import arjun, httpx_probe, nmap, nuclei, retire, testssl, trufflehog
 from app.tools.secrets import mask, scan_text
 from app.targets import TargetError, parse_target, _blocked
 
@@ -88,3 +88,40 @@ def test_target_parsing_and_blocking():
     for ip in ["127.0.0.1", "10.1.2.3", "192.168.1.5", "169.254.169.254", "::1", "100.64.1.1"]:
         assert _blocked(ip), ip
     assert not _blocked("8.8.8.8")
+
+
+FILES = {"001_app.js": "https://a.example/assets/app.js"}
+
+
+def test_trufflehog_parse_only_verified():
+    live = {"DetectorName": "OpenAI", "Verified": True, "Raw": "sk-proj-" + "a" * 50,
+            "SourceMetadata": {"Data": {"Filesystem": {"file": "/tmp/x/js/001_app.js"}}}}
+    dead = dict(live, Verified=False, DetectorName="Stripe")
+    fs = trufflehog.parse(json.dumps(live) + "\n" + json.dumps(dead) + "\nnot json", FILES, "https://a.example/")
+    assert len(fs) == 1
+    f = fs[0]
+    assert f.severity.value == "critical" and f.category.value == "exposed_secret"
+    assert f.location == "https://a.example/assets/app.js"
+    assert "a" * 20 not in f.evidence and "verified live" in f.evidence
+
+
+def test_retire_parse_v5_and_legacy():
+    entry = {"file": "/tmp/js/001_app.js", "results": [{"component": "jquery", "version": "3.4.1", "vulnerabilities": [
+        {"severity": "medium", "below": "3.5.0", "identifiers": {"CVE": ["CVE-2020-11022"], "summary": "XSS"},
+         "info": ["https://example.org/a"]}]}]}
+    for doc in ({"version": "5", "data": [entry]}, [entry]):
+        fs = retire.parse(json.dumps(doc), FILES, "https://a.example/")
+        assert len(fs) == 1 and fs[0].severity.value == "medium" and fs[0].category.value == "vulnerability"
+        assert "3.5.0" in fs[0].evidence and fs[0].location == "https://a.example/assets/app.js"
+    assert retire.parse("garbage", FILES, "x") == []
+
+
+def test_arjun_parse_flags_sensitive_params():
+    doc = {"https://a.example/api/users": {"params": ["debug", "page"], "method": "GET"},
+           "https://a.example/": {"params": ["utm"], "method": "GET"},
+           "https://a.example/api/x": {"params": [], "method": "GET"}}
+    fs = {f.location: f for f in arjun.parse(json.dumps(doc))}
+    assert fs["https://a.example/api/users"].severity.value == "medium"
+    assert fs["https://a.example/"].severity.value == "info"
+    assert "https://a.example/api/x" not in fs
+    assert arjun.parse("") == []
