@@ -145,6 +145,25 @@ Stop polling when `status` is `completed`, `partial`, `failed` or `cancelled`. `
 
 The complete `ScanResult` (schema in [SCHEMA.md](SCHEMA.md)). Works while running too (you get the findings so far), but treat it as final only once `status` is terminal. Findings are sorted most severe first.
 
+### `GET /api/v1/scans/{scan_id}/tips`: plain-English fixes
+
+Only for `completed` / `partial` scans (`409 scan_not_finished` otherwise). Returns one tip per non-info finding, keyed by finding `id`:
+
+```json
+{
+  "scan_id": "scn_b9b67716f314",
+  "source": "gemini",
+  "tips": {
+    "4c1f0e9a2b7d": { "epithet": "The Open Gate", "summary": "...", "impact": "...", "fix_prompt": "paste-ready prompt", "source": "gemini" }
+  },
+  "attempts": [ { "provider": "grok", "ok": false, "error": "HTTP 429" }, { "provider": "gemini", "ok": true, "tips": 6 } ]
+}
+```
+
+How it is written: **Grok (xAI) → Gemini → Claude → built-in rule table**, in `ACHILLES_AI_ORDER`. A provider with no API key is skipped; the rule table is the baseline, so every finding always has a tip and the endpoint never fails because an AI is down. The model may only explain the findings it is given: unknown ids in its reply are discarded, malformed tips fall back to the rule tip, and finding text is passed as untrusted data. Results are cached per scan in `data/tips/`; `?refresh=true` regenerates. This call can take up to ~40 s when providers are slow, so call it after the results and upgrade the UI when it returns.
+
+Setting a provider key sends finding titles, locations and masked evidence to that provider. Set keys in `.env` (see `.env.example`); `GET /health` shows which providers are configured (names only).
+
 ### `GET /api/v1/scans?limit=50`
 
 List of status objects (same shape as `GET /scans/{id}`), newest first.

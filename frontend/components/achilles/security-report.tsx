@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { ArrowLeft, ChevronLeft, ChevronRight, Swords } from 'lucide-react'
-import { countBySeverity, findings, securityScore, severityMeta, type Finding } from '@/lib/achilles-data'
+import { countBySeverity, severityMeta, type Finding } from '@/lib/achilles-data'
+import { securityScoreOf, toUiFindings, verdictOf } from '@/lib/fixes'
+import type { ScanResult, TipsResponse } from '@/lib/scan-types'
+import { ExportMenu } from './export-menu'
 import { ScoreRing } from './results-dashboard'
 import { SeverityBadge } from './severity-badge'
 import { CopyButton } from './copy-button'
@@ -25,6 +28,10 @@ function PromptCard({ finding }: { finding: Finding }) {
   )
 }
 
+function Empty({ text }: { text: string }) {
+  return <p className="rounded-lg border border-border bg-background p-5 text-sm text-muted-foreground">{text}</p>
+}
+
 function SlideHeader({ eyebrow, title, body }: { eyebrow: string; title: string; body?: string }) {
   return (
     <header>
@@ -35,8 +42,11 @@ function SlideHeader({ eyebrow, title, body }: { eyebrow: string; title: string;
   )
 }
 
-export function SecurityReport({ host, onBack }: { host: string; onBack: () => void }) {
+export function SecurityReport({ scan, tips, onBack }: { scan: ScanResult; tips?: TipsResponse | null; onBack: () => void }) {
   const [index, setIndex] = useState(0)
+  const host = scan.target.host
+  const findings = toUiFindings(scan, tips)
+  const verdict = verdictOf(scan)
   const counts = countBySeverity(findings)
   const critical = findings.filter((f) => f.severity === 'critical')
   const high = findings.filter((f) => f.severity === 'high')
@@ -49,12 +59,12 @@ export function SecurityReport({ host, onBack }: { host: string; onBack: () => v
       title: 'Overview',
       content: (
         <div className="grid items-center gap-10 md:grid-cols-[auto_1fr]">
-          <ScoreRing score={securityScore} size={180} />
+          <ScoreRing score={securityScoreOf(scan)} grade={scan.summary.grade} size={180} />
           <div>
             <SlideHeader
               eyebrow="I · The Prophecy"
-              title={`${host} is strong — but not invulnerable.`}
-              body="Achilles found 6 weaknesses. One of them is serious enough that an attacker could take over your database today."
+              title={`${host}: ${verdict.label.toLowerCase()}.`}
+              body={`Achilles found ${findings.length} weakness${findings.length === 1 ? '' : 'es'}. ${verdict.text}`}
             />
             <dl className="mt-8 grid grid-cols-4 gap-3">
               {(Object.keys(counts) as Array<keyof typeof counts>).map((s) => (
@@ -74,10 +84,11 @@ export function SecurityReport({ host, onBack }: { host: string; onBack: () => v
         <div>
           <SlideHeader
             eyebrow="II · Your Achilles' heel"
-            title="Fix this before anything else."
-            body="This single issue gives anyone full control of your data. Paste the prompt into your AI builder, then rotate the key."
+            title={critical.length ? 'Fix this before anything else.' : 'No critical flaws.'}
+            body="Critical issues give anyone control of your data. Paste each prompt into your AI builder, then rotate any exposed key."
           />
           <div className="mt-8 flex flex-col gap-4">
+            {critical.length === 0 && <Empty text="No critical flaws found. Nothing here gives an attacker immediate control." />}
             {critical.map((f) => (
               <PromptCard key={f.id} finding={f} />
             ))}
@@ -91,10 +102,11 @@ export function SecurityReport({ host, onBack }: { host: string; onBack: () => v
         <div>
           <SlideHeader
             eyebrow="III · Breaches in the wall"
-            title="Two high-risk openings."
+            title={high.length ? `${high.length} high-risk opening${high.length === 1 ? '' : 's'}.` : 'No high-risk openings.'}
             body="These let attackers read private user data or reach admin-only features."
           />
           <div className="mt-8 grid gap-4 lg:grid-cols-2">
+            {high.length === 0 && <Empty text="Nothing high-risk showed up in these checks." />}
             {high.map((f) => (
               <PromptCard key={f.id} finding={f} />
             ))}
@@ -112,6 +124,7 @@ export function SecurityReport({ host, onBack }: { host: string; onBack: () => v
             body="Not urgent on their own, but attackers chain small issues together."
           />
           <div className="mt-8 grid gap-4 lg:grid-cols-3">
+            {rest.length === 0 && <Empty text="No smaller cracks found either." />}
             {rest.map((f) => (
               <PromptCard key={f.id} finding={f} />
             ))}
@@ -131,7 +144,7 @@ export function SecurityReport({ host, onBack }: { host: string; onBack: () => v
           <ol className="mt-8 flex flex-col divide-y divide-border rounded-lg border border-border">
             {findings.map((f, i) => (
               <li key={f.id} className="flex items-center gap-4 px-5 py-3.5">
-                <span className="font-serif text-sm text-gold">{['I', 'II', 'III', 'IV', 'V', 'VI'][i]}</span>
+                <span className="font-serif text-sm text-gold">{i + 1}</span>
                 <span className="min-w-0 flex-1 truncate text-sm">{f.title}</span>
                 <SeverityBadge severity={f.severity} className="hidden sm:inline-flex" />
               </li>
@@ -142,10 +155,13 @@ export function SecurityReport({ host, onBack }: { host: string; onBack: () => v
               <Swords className="size-5 text-gold" aria-hidden="true" />
               <div>
                 <p className="text-sm font-medium">Fix everything in one prompt</p>
-                <p className="text-xs text-muted-foreground">Estimated new score after fixes: 94 / 100</p>
+                <p className="text-xs text-muted-foreground">{findings.length} fix{findings.length === 1 ? '' : 'es'}, most severe first</p>
               </div>
             </div>
             <CopyButton text={battlePlan} label="Copy full battle plan" className="bg-gold text-primary-foreground hover:brightness-110" />
+          </div>
+          <div className="mt-6">
+            <ExportMenu scan={scan} findings={findings} />
           </div>
         </div>
       ),
