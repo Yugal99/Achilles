@@ -50,7 +50,7 @@ def test_full_scan_flow():
         assert res["findings"][0]["severity"] == "critical"  # sorted most severe first
         assert res["summary"]["total"] == len(res["findings"])
         assert "Supabase" in res["stack"]["technologies"]
-        assert {t["status"] for t in res["tools"].values()} <= {"ok", "skipped"}  # demo skips arjun (too slow)
+        assert {t["status"] for t in res["tools"].values()} <= {"ok", "skipped"}
         assert res["tools"]["trufflehog"]["status"] == "ok" and res["tools"]["retire"]["status"] == "ok"
         assert any(x["scan_id"] == sid for x in c.get("/api/v1/scans", headers=H).json())
 
@@ -108,3 +108,35 @@ def test_host_history_newest_first_and_gated():
         r = c.get("/api/v1/hosts/unverified.example/scans", headers=H)
         assert r.status_code == 403 and r.json()["error"]["code"] == "ownership_not_verified"
         assert c.get("/api/v1/hosts/lab.test/scans").status_code == 401
+
+
+def test_deep_profile_has_no_time_limits():
+    """Deep scans report 0 (no limit) for every tool and finish only when every tool has."""
+    with TestClient(app) as c:
+        prof = c.get("/api/v1/profiles", headers=H).json()["deep"]
+        assert prof["deadline_s"] == 0 and set(prof["tool_timeouts_s"].values()) == {0}
+        sid = c.post("/api/v1/scans", json={"target": "https://lab.test", "profile": "deep"}, headers=H).json()["scan_id"]
+        s = wait(c, sid)
+        assert s["status"] == "completed" and s["profile"] == "deep"
+        assert {t["status"] for t in s["tools"].values()} == {"ok"}
+        assert {t["timeout_s"] for t in s["tools"].values()} == {0}
+
+
+def test_repeat_request_joins_the_scan_in_progress():
+    """Asking twice for the same URL and profile follows one scan; another profile gets its own."""
+    fake.DELAYS = {k: 1 for k in fake.DELAYS}
+    try:
+        with TestClient(app) as c:
+            body = {"target": "https://lab.test", "profile": "deep"}
+            first = c.post("/api/v1/scans", json=body, headers=H).json()
+            again = c.post("/api/v1/scans", json=body, headers=H).json()
+            assert not first["joined"] and again["joined"] and again["scan_id"] == first["scan_id"]
+            other = c.post("/api/v1/scans", json={"target": "https://lab.test", "profile": "demo"}, headers=H).json()
+            assert not other["joined"] and other["scan_id"] != first["scan_id"]
+            assert wait(c, first["scan_id"])["status"] == "completed"
+            assert wait(c, other["scan_id"])["status"] == "completed"
+            fresh = c.post("/api/v1/scans", json=body, headers=H).json()  # the first one is over, so this is new
+            assert not fresh["joined"] and fresh["scan_id"] != first["scan_id"]
+            wait(c, fresh["scan_id"])
+    finally:
+        fake.DELAYS = {k: 0.2 for k in fake.DELAYS}

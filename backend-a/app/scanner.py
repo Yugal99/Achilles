@@ -3,6 +3,7 @@
 - Scans wait in an asyncio queue; ACHILLES_MAX_CONCURRENT_SCANS workers pull from it.
 - Inside a scan, all tools run in parallel, each with its own timeout from the profile.
 - A profile-wide deadline cuts whatever is still running, so the demo always returns in time.
+- The deep profile sets no timeouts and no deadline: its tools run until they exit or the scan is cancelled.
 - A tool that times out / errors / is missing never fails the scan: the scan ends "partial".
 - State is written to data/scans/<id>.json after every change, so restarts keep history.
 - With ACHILLES_MONGODB_URI set, every change is also upserted to MongoDB (see store.py), and history
@@ -108,12 +109,25 @@ class ScanManager:
             self.db.save_scan(s)
 
     # --- public API -----------------------------------------------------------
+    def active_scan(self, target: Target, profile: str) -> ScanResult | None:
+        """A queued or running scan of the same URL with the same profile, if there is one."""
+        for s in self.scans.values():
+            if (s.status in (ScanStatus.queued, ScanStatus.running) and s.profile == profile
+                    and s.target.url == target.url):
+                return s
+        return None
+
     def submit(self, target: Target, profile: str) -> ScanResult:
+        # Asking again for a scan that is already queued or running joins it. Otherwise every return to the
+        # scan page would queue a duplicate behind the first, and the queue would stall.
+        existing = self.active_scan(target, profile)
+        if existing:
+            return existing
         if len(self.waiting) >= settings.max_queue:
             raise QueueFull(f"queue is full ({settings.max_queue} scans waiting)")
         scan_id = "scn_" + secrets.token_hex(6)
         s = ScanResult(scan_id=scan_id, profile=profile, target=target,
-                       tools={n: ToolRun(timeout_s=PROFILES[profile]["tools"][n]["timeout"]) for n in TOOL_NAMES})
+                       tools={n: ToolRun(timeout_s=PROFILES[profile]["tools"][n]["timeout"] or 0) for n in TOOL_NAMES})
         self.scans[scan_id] = s
         self.waiting.append(scan_id)
         self._update_positions()

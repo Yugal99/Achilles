@@ -4,16 +4,7 @@ import { useEffect, useState } from 'react'
 import { SiteNav } from './site-nav'
 import { SiteFooter } from './site-footer'
 import { Hero } from './hero'
-import {
-  ArchitectureSection,
-  DashboardPreviewSection,
-  FeaturesSection,
-  FinalCta,
-  OdysseySection,
-  RemediationSection,
-  TrustSection,
-  WhySection,
-} from './landing-sections'
+import { FinalCta, OdysseySection, PantheonSection } from './landing-sections'
 import { FlowStepper } from './flow-stepper'
 import { VerifyStep } from './verify-step'
 import { ScanStep } from './scan-step'
@@ -22,7 +13,7 @@ import { SecurityReport } from './security-report'
 import { DEMO_HOST } from '@/lib/demo-scan'
 import type { ScanResult, ScanStatusView } from '@/lib/scan-types'
 import type { TipsState } from '@/lib/insights'
-import { api } from '@/lib/api'
+import { api, type ScanProfile } from '@/lib/api'
 
 type Step = 'landing' | 'verify' | 'scan' | 'results' | 'report'
 type Mode = 'demo' | 'live'
@@ -34,6 +25,7 @@ export function AchillesApp() {
   const [host, setHost] = useState(DEMO_HOST)
   const [target, setTarget] = useState(`https://${DEMO_HOST}`)
   const [mode, setMode] = useState<Mode>('live')
+  const [profile, setProfile] = useState<ScanProfile>('demo')
   const [scan, setScan] = useState<ScanResult | null>(null)
   const [scanKey, setScanKey] = useState(0)
   const [tipsState, setTipsState] = useState<TipsState>({ kind: 'idle' })
@@ -41,6 +33,12 @@ export function AchillesApp() {
   // Stored scans of the current host (from the scanner, durable in MongoDB) and the one before this scan.
   const [history, setHistory] = useState<ScanStatusView[] | null>(null)
   const [previous, setPrevious] = useState<ScanResult | null>(null)
+
+  // App screens use their own palette (see :root[data-theme='app'] in globals.css); the landing page keeps navy and gold.
+  useEffect(() => {
+    if (step === 'landing') delete document.documentElement.dataset.theme
+    else document.documentElement.dataset.theme = 'app'
+  }, [step])
 
   // Ask the scanner whether it is in fake mode, so canned live results are labeled as such.
   useEffect(() => {
@@ -138,7 +136,7 @@ export function AchillesApp() {
 
   return (
     <>
-      <a href="#main" className="sr-only z-[60] rounded-md bg-white px-3 py-2 text-sm focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
+      <a href="#main" className="sr-only z-[60] rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
         Skip to content
       </a>
       <SiteNav onHome={() => goTo('landing')} onSection={showSection} onDemo={startDemo} onScan={focusScanner} />
@@ -146,28 +144,23 @@ export function AchillesApp() {
         {step === 'landing' ? (
           <>
             <Hero onScan={startScan} onDemo={startDemo} />
-            <WhySection />
+            <PantheonSection />
             <OdysseySection />
-            <DashboardPreviewSection onDemo={startDemo} />
-            <FeaturesSection />
-            <RemediationSection />
-            <ArchitectureSection />
-            <TrustSection />
             <FinalCta onScan={focusScanner} />
           </>
         ) : (
-          <div className="relative min-h-svh px-4 pt-28 pb-20 sm:px-6">
-            <div aria-hidden="true" className="atlas-grid pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+          <div className="relative min-h-svh px-4 pt-36 pb-20 sm:px-6">
             <FlowStepper current={stepIndex[step]} />
             <div key={`${step}-${scanKey}`} className="animate-fade-up mt-12">
               {step === 'verify' && (
-                <VerifyStep host={host} target={target} mode={mode} onVerified={() => goTo('scan')} onUseDemo={startDemo} onOpenScan={openScan} />
+                <VerifyStep host={host} target={target} mode={mode} profile={profile} onProfile={setProfile} onVerified={() => goTo('scan')} onUseDemo={startDemo} onOpenScan={openScan} />
               )}
               {step === 'scan' && (
                 <ScanStep
                   host={host}
                   target={target}
                   mode={mode}
+                  profile={profile}
                   scannerFake={scannerFake}
                   onComplete={(result) => {
                     setScan(result)
@@ -200,7 +193,7 @@ export function AchillesApp() {
           </div>
         )}
       </main>
-      <SiteFooter onSection={showSection} onDemo={startDemo} />
+      <SiteFooter />
     </>
   )
 }

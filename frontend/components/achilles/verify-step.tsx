@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { ArrowRight, Check, CircleDashed, FileText, Globe, History, Loader2, Network, Play, RotateCcw, ShieldCheck, XCircle } from 'lucide-react'
-import { api, ApiError } from '@/lib/api'
+import { api, ApiError, type ScanProfile } from '@/lib/api'
 import type { OwnershipChallenge, ScanStatusView } from '@/lib/scan-types'
 import { ScanHistoryList } from './scan-history'
 import { CopyButton } from './copy-button'
-import { btn, Notice, Panel, SampleTag } from './kit'
+import { Flame } from './god-icons'
+import { btn, Notice, Panel, SampleTag, StepHeading } from './kit'
 import { cn } from '@/lib/utils'
 
 type Method = 'file' | 'dns'
@@ -15,6 +16,11 @@ type Phase =
   | { kind: 'ready'; challenge: OwnershipChallenge; lab: boolean }
   | { kind: 'error'; message: string }
 type Status = 'idle' | 'checking' | 'failed' | 'verified'
+
+const DEPTHS: Array<{ id: ScanProfile; title: string; time: string; body: string }> = [
+  { id: 'demo', title: 'Quick scan', time: 'under 2 minutes', body: 'The ports and checks that catch the common mistakes. Any tool still running at the time limit is cut short.' },
+  { id: 'deep', title: 'Deep scan', time: 'an hour or more', body: 'All 65,535 ports, every Nuclei template and the full TLS test. Every tool runs until it finishes.' },
+]
 
 const DEMO_CHALLENGE: OwnershipChallenge = {
   host: 'vibe-todo.vercel.app',
@@ -37,6 +43,8 @@ export function VerifyStep({
   host,
   target,
   mode,
+  profile,
+  onProfile,
   onVerified,
   onUseDemo,
   onOpenScan,
@@ -44,6 +52,8 @@ export function VerifyStep({
   host: string
   target: string
   mode: 'demo' | 'live'
+  profile: ScanProfile
+  onProfile: (p: ScanProfile) => void
   onVerified: () => void
   onUseDemo: () => void
   /** Open a stored report instead of scanning again. */
@@ -116,7 +126,7 @@ export function VerifyStep({
   if (phase.kind === 'loading') {
     return (
       <div className="mx-auto max-w-2xl py-16 text-center" role="status">
-        <Loader2 className="mx-auto size-6 animate-spin text-aegean" aria-hidden="true" />
+        <Loader2 className="mx-auto size-6 animate-spin text-accent" aria-hidden="true" />
         <p className="mt-4 text-sm text-muted-foreground">Requesting a verification token for {host}…</p>
       </div>
     )
@@ -126,9 +136,9 @@ export function VerifyStep({
     return (
       <Panel className="mx-auto max-w-lg p-6 text-center">
         <XCircle className="mx-auto size-7 text-critical" aria-hidden="true" />
-        <h1 className="mt-3 text-lg font-semibold text-navy">Couldn&apos;t start verification</h1>
+        <h1 className="mt-3 text-lg font-semibold text-foreground">The hearth stayed cold</h1>
         <p role="alert" className="mt-1 text-sm text-muted-foreground">
-          {phase.message}
+          Verification could not start. {phase.message}
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-3">
           <button type="button" onClick={() => {
@@ -163,22 +173,22 @@ export function VerifyStep({
   return (
     <div className="mx-auto max-w-3xl">
       <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-navy">Verify Your Application</h1>
-          <p className="mt-2 text-muted-foreground">
-            Before scanning, confirm you own this application or have authorization to test it.
-          </p>
-        </div>
+        <StepHeading
+          eyebrow="Hestia · ownership check"
+          icon={<Flame size={40} className="shrink-0 text-accent" />}
+          title="Prove it's your hearth"
+          plain="Verify that you own this site, or have permission to test it. Nothing is scanned until you do."
+        />
         {mode === 'demo' && <SampleTag>Sample walkthrough</SampleTag>}
       </div>
 
       <Panel className="mt-8 flex items-center gap-3 p-4">
-        <span className="flex size-9 items-center justify-center rounded-lg bg-sky text-primary">
+        <span className="flex size-9 items-center justify-center rounded-md border border-border bg-background text-accent">
           <Globe className="size-4" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-xs text-muted-foreground">Target</p>
-          <p className="truncate font-mono text-sm font-medium text-navy">{target}</p>
+          <p className="truncate font-mono text-sm font-medium text-foreground">{target}</p>
         </div>
         <StatusChip status={status} lab={lab} />
       </Panel>
@@ -191,7 +201,7 @@ export function VerifyStep({
       ) : (
         <>
           <fieldset className="mt-8">
-            <legend className="text-sm font-semibold text-navy">Choose a verification method</legend>
+            <legend className="text-sm font-semibold text-foreground">Choose a verification method</legend>
             <div role="radiogroup" aria-label="Verification method" className="mt-3 grid gap-3 sm:grid-cols-2">
               {(
                 [
@@ -207,15 +217,15 @@ export function VerifyStep({
                   onClick={() => setMethod(id)}
                   disabled={locked}
                   className={cn(
-                    'flex items-start gap-3 rounded-xl border bg-card p-4 text-left transition-[border-color,box-shadow] duration-150 disabled:opacity-60',
-                    method === id ? 'border-aegean shadow-[0_0_0_3px_rgb(40_126_176/0.12)]' : 'border-border hover:border-aegean/40',
+                    'flex min-h-12 items-start gap-3 rounded-sm border p-4 text-left transition-colors duration-150 disabled:opacity-60',
+                    method === id ? 'border-accent bg-surface-selected' : 'border-border bg-card hover:border-line-strong',
                   )}
                 >
-                  <span className={cn('mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border', method === id ? 'border-aegean bg-aegean' : 'border-input')}>
-                    {method === id && <span className="size-2 rounded-full bg-white" />}
+                  <span className={cn('mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border', method === id ? 'border-accent bg-accent' : 'border-line-strong')}>
+                    {method === id && <span className="size-2 rounded-full bg-background" />}
                   </span>
                   <span className="min-w-0">
-                    <span className="flex items-center gap-2 text-sm font-semibold text-navy">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
                       <Icon className="size-4 text-primary" aria-hidden="true" /> {title}
                     </span>
                     <span className="mt-0.5 block text-xs text-muted-foreground">{body}</span>
@@ -236,9 +246,9 @@ export function VerifyStep({
                   <Value value={fileContent} accent />
                 </Field>
                 <Field n={3} label="Deploy, then verify below">
-                  <div className="rounded-lg border border-border bg-surface-soft p-4">
+                  <div className="rounded-sm border border-dashed border-line-strong bg-background p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-xs font-semibold text-navy">Using an AI builder? Paste this prompt:</p>
+                      <p className="text-xs font-semibold text-foreground">Using an AI builder? Paste this prompt:</p>
                       <CopyButton text={builderPrompt} label="Copy prompt" />
                     </div>
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{builderPrompt}</p>
@@ -259,7 +269,7 @@ export function VerifyStep({
                   </dd>
                   <dt className="text-sm text-muted-foreground sm:pt-2">Record type</dt>
                   <dd>
-                    <span className="inline-flex h-10 items-center rounded-lg border border-border bg-surface-soft px-3 font-mono text-sm text-navy">{dns.type}</span>
+                    <span className="inline-flex h-11 items-center rounded-md border border-border bg-background px-3 font-mono text-sm text-foreground">{dns.type}</span>
                   </dd>
                   <dt className="text-sm text-muted-foreground sm:pt-2">Value</dt>
                   <dd>
@@ -271,13 +281,13 @@ export function VerifyStep({
             )}
           </Panel>
 
-          <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-card p-4 text-sm text-navy">
+          <label className="mt-6 flex min-h-12 cursor-pointer items-start gap-3 rounded-lg border border-border bg-card p-4 text-sm text-foreground">
             <input
               type="checkbox"
               checked={authorized}
               onChange={(e) => setAuthorized(e.target.checked)}
               disabled={locked}
-              className="mt-0.5 size-4 accent-[var(--aegean)]"
+              className="mt-0.5 size-4 accent-[var(--accent)]"
             />
             <span>
               I own this application or have written permission to test it.
@@ -296,15 +306,45 @@ export function VerifyStep({
       <div className="mt-8">
         {status === 'verified' ? (
           <>
-            <div className="flex flex-col gap-4 rounded-xl border border-success/30 bg-[#eef8f2] p-4 sm:flex-row sm:items-center sm:justify-between">
-              <p role="status" className="flex items-center gap-2.5 text-sm font-medium text-[#14532d]">
-                <span className="flex size-6 items-center justify-center rounded-full bg-success text-white">
+            {mode === 'live' && (
+              <fieldset className="mb-6">
+                <legend className="text-sm font-semibold text-foreground">Choose a scan depth</legend>
+                <div role="radiogroup" aria-label="Scan depth" className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {DEPTHS.map((d) => (
+                    <button
+                      key={d.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={profile === d.id}
+                      onClick={() => onProfile(d.id)}
+                      className={cn(
+                        'flex min-h-12 items-start gap-3 rounded-sm border p-4 text-left transition-colors duration-150',
+                        profile === d.id ? 'border-accent bg-surface-selected' : 'border-border bg-card hover:border-line-strong',
+                      )}
+                    >
+                      <span className={cn('mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border', profile === d.id ? 'border-accent bg-accent' : 'border-line-strong')}>
+                        {profile === d.id && <span className="size-2 rounded-full bg-background" />}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold text-foreground">
+                          {d.title} <span className="font-mono text-xs font-normal text-muted-foreground">{d.time}</span>
+                        </span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">{d.body}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+            <div className="flex flex-col gap-4 rounded-sm border border-accent bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+              <p role="status" className="flex items-center gap-2.5 text-sm font-medium text-foreground">
+                <span className="flex size-6 items-center justify-center rounded-full bg-accent text-primary-foreground">
                   <Check className="size-3.5" aria-hidden="true" />
                 </span>
                 {lab ? `Lab target ready: ${host}` : `Ownership verified for ${host}`}
               </p>
               <button type="button" onClick={onVerified} className={btn.primary}>
-                {history?.length ? 'Run a new scan' : 'Begin scan'} <ArrowRight className="size-4" aria-hidden="true" />
+                {mode === 'live' && profile === 'deep' ? 'Begin deep scan' : history?.length ? 'Run a new scan' : 'Begin scan'} <ArrowRight className="size-4" aria-hidden="true" />
               </button>
             </div>
             {mode === 'live' && history === null && (
@@ -316,7 +356,7 @@ export function VerifyStep({
               <Panel className="mt-6 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <h2 className="flex items-center gap-2 text-sm font-semibold text-navy">
+                    <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
                       <History className="size-4 text-primary" aria-hidden="true" /> You&apos;ve scanned {host} before
                     </h2>
                     <p className="mt-0.5 text-xs text-muted-foreground">
@@ -358,13 +398,13 @@ export function VerifyStep({
 
 function StatusChip({ status, lab }: { status: Status; lab: boolean }) {
   const map = {
-    idle: { label: 'Pending', cls: 'border-border text-muted-foreground', Icon: CircleDashed },
-    checking: { label: 'Checking', cls: 'border-aegean/30 text-aegean', Icon: Loader2 },
-    failed: { label: 'Not found', cls: 'border-medium/30 text-medium', Icon: XCircle },
-    verified: { label: lab ? 'Lab target' : 'Verified', cls: 'border-success/30 text-success', Icon: Check },
+    idle: { label: 'Pending', cls: 'border-line-strong text-muted-foreground', Icon: CircleDashed },
+    checking: { label: 'Checking', cls: 'border-accent text-accent', Icon: Loader2 },
+    failed: { label: 'Not found', cls: 'border-critical text-critical', Icon: XCircle },
+    verified: { label: lab ? 'Lab target' : 'Verified', cls: 'border-accent text-accent', Icon: Check },
   }[status]
   return (
-    <span className={cn('inline-flex shrink-0 items-center gap-1.5 rounded-md border bg-card px-2.5 py-1 text-xs font-semibold', map.cls)}>
+    <span className={cn('inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-semibold', map.cls)}>
       <map.Icon className={cn('size-3.5', status === 'checking' && 'animate-spin')} aria-hidden="true" />
       {map.label}
     </span>
@@ -374,9 +414,9 @@ function StatusChip({ status, lab }: { status: Status; lab: boolean }) {
 function Field({ n, label, children }: { n: number; label: string; children: React.ReactNode }) {
   return (
     <li className="grid grid-cols-[1.75rem_1fr] gap-3">
-      <span className="flex size-7 items-center justify-center rounded-full border border-aegean/30 bg-sky/60 font-mono text-xs font-semibold text-primary">{n}</span>
+      <span className="flex size-7 items-center justify-center rounded-full border border-accent font-mono text-xs font-semibold text-accent">{n}</span>
       <div className="min-w-0">
-        <p className="mb-2 text-sm font-medium text-navy">{label}</p>
+        <p className="mb-2 text-sm font-medium text-foreground">{label}</p>
         {children}
       </div>
     </li>
@@ -385,8 +425,8 @@ function Field({ n, label, children }: { n: number; label: string; children: Rea
 
 function Value({ value, accent }: { value: string; accent?: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-soft py-1.5 pr-1.5 pl-3">
-      <code className={cn('min-w-0 overflow-x-auto font-mono text-sm whitespace-nowrap', accent ? 'font-semibold text-primary' : 'text-navy')}>{value}</code>
+    <div className="flex items-center justify-between gap-3 rounded-sm border border-line-strong bg-background py-1 pr-1 pl-3">
+      <code className={cn('min-w-0 overflow-x-auto font-mono text-sm whitespace-nowrap', accent ? 'font-semibold text-accent' : 'text-foreground')}>{value}</code>
       <CopyButton text={value} />
     </div>
   )

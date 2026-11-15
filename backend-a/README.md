@@ -210,11 +210,13 @@ They run without any tools installed (parsers use sample output; the API tests u
 | `demo` (default) | 40 focused ports (DBs, dev servers, admin panels) + the app's port | curated tags + `templates/achilles` | protocols + certificate | **110 s** |
 | `web` | **skipped** (never port-scans) | curated tags, gentle rate (50 req/s) | protocols + certificate | **110 s** |
 | `standard` | top 1000 ports | all templates, low+ | + ciphers, vulnerabilities | 15 min |
-| `deep` | all 65535 ports | all templates, incl. info | full | 60 min |
+| `deep` | all 65535 ports | all templates, incl. info | full | none |
 
 Use `web` for apps on shared hosting (Railway, Vercel, Render...): ports on those hosts belong to the platform, not you, so Nmap is skipped and reported as `skipped` in `tools.nmap`. Start it with `./scripts/scan.sh https://myapp.up.railway.app web` (second argument = profile) or `"profile": "web"` in the API body.
 
 Each tool has its own timeout too (see `app/profiles.py`). When a tool hits its limit it's killed, whatever it already found is kept, it's marked `timeout`, and the scan ends as `partial` instead of failing.
+
+`deep` is the exception. It has no deadline and no per-tool timeouts, so every tool runs until it exits and nothing is cut short. A deep scan can take an hour or more, and with `ACHILLES_MAX_CONCURRENT_SCANS=1` it holds the queue until it finishes. Stop one early with `DELETE /api/v1/scans/{scan_id}`.
 
 ## Safety rules built in
 

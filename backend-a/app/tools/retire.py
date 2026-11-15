@@ -6,7 +6,7 @@ import os
 
 from ..runner import run_cmd
 from . import jsfetch
-from .base import ToolContext, ToolNotInstalled, ToolOutput, finding, save_raw
+from .base import ToolContext, ToolNotInstalled, ToolOutput, finding, save_raw, proc_timeout
 
 TOOL = "retire"
 SEV = {"critical": "critical", "high": "high", "medium": "medium", "moderate": "medium", "low": "low"}
@@ -53,7 +53,7 @@ async def run(ctx: ToolContext) -> ToolOutput:
     if not bundle.files:
         raise RuntimeError("could not download the page or its scripts")
     outfile = ctx.raw_dir / "retire.json"
-    res = await run_cmd(build_argv(ctx, str(bundle.dir), str(outfile)), timeout=ctx.opts["timeout"] - 2,
+    res = await run_cmd(build_argv(ctx, str(bundle.dir), str(outfile)), timeout=proc_timeout(ctx),
                         env={"HOME": os.environ.get("HOME", "/root")})
     if res.stderr:
         save_raw(ctx, "retire.stderr.txt", res.stderr)

@@ -75,7 +75,6 @@ Achilles only scans targets you have proven you control, and it never exploits w
 Scanning systems without permission is illegal in most places. Don't point Achilles, or the tools it uses, at anything you don't own.
 
 Roadmap
-Deep scan profile (all ports and the full Nuclei template set)
 OWASP ZAP baseline scans
 More stack-specific checks (Supabase row-level security, Firebase rules)
 Rescans that show what got fixed

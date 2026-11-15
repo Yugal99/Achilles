@@ -9,7 +9,7 @@ import urllib.error
 import urllib.request
 from urllib.parse import urljoin, urlsplit
 
-from .base import ToolContext, ToolOutput, finding, save_raw
+from .base import ToolContext, ToolOutput, finding, save_raw, proc_timeout
 from .secrets import mask, scan_text
 
 TOOL = "jscheck"
@@ -223,7 +223,7 @@ async def run(ctx: ToolContext) -> ToolOutput:
     # Runs in a worker thread; on timeout we keep whatever it found so far and abandon the thread.
     partial = False
     try:
-        await asyncio.wait_for(asyncio.to_thread(c.run), timeout=ctx.opts["timeout"] - 2)
+        await asyncio.wait_for(asyncio.to_thread(c.run), timeout=proc_timeout(ctx))
     except asyncio.TimeoutError:
         partial = True
     save_raw(ctx, "jscheck.log.txt", "\n".join(c.log))

@@ -64,10 +64,12 @@ async def run(tool: str, ctx: ToolContext) -> ToolOutput:
                     evidence="SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, OPENAI_API_KEY",
                     description="Your .env usually holds database passwords and API keys.",
                     remediation="Remove .env from the deployed folder and rotate every secret in it.",
-                    tags=["exposure", "config", "env"]),
+                    tags=["exposure", "config", "env"],
+                    cvss_score=8.3, cvss_vector="CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:C/C:L/I:L/A:L"),
             finding("nuclei", "git-config", "Git config exposed", "high", "exposed_file", f"{base}/.git/config",
                     evidence="[core]", description="Source code and history can be downloaded.",
-                    remediation="Block /.git or stop deploying it.", tags=["exposure", "git"]),
+                    remediation="Block /.git or stop deploying it.", tags=["exposure", "git"],
+                    cvss_score=5.3, cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"),
         ])
     if tool == "trufflehog":
         return ToolOutput(command="fake:trufflehog", message="scanned 7 files, 1 live secrets", findings=[

@@ -4,7 +4,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 
 from ..runner import run_cmd
-from .base import ToolContext, ToolNotInstalled, ToolOutput, finding, save_raw
+from .base import ToolContext, ToolNotInstalled, ToolOutput, finding, save_raw, proc_timeout
 
 TOOL = "nmap"
 
@@ -49,8 +49,10 @@ EXPECTED = {80, 443}
 
 def build_argv(ctx: ToolContext) -> list[str]:
     o = ctx.opts
-    argv = [ctx.bin, "-Pn", "-sT", "-sV", "--version-light", "-T4", "--max-retries", "1",
-            "--host-timeout", o.get("host_timeout", "70s"), "--open", "-oX", "-"]
+    argv = [ctx.bin, "-Pn", "-sT", "-sV", "--version-light", "-T4", "--max-retries", "1", "--open", "-oX", "-"]
+    host_timeout = o.get("host_timeout", "70s")
+    if host_timeout:  # None in the deep profile: let nmap finish every port
+        argv += ["--host-timeout", host_timeout]
     if o.get("ports") == "-":
         argv += ["-p-"]
     elif o.get("ports"):
@@ -114,7 +116,7 @@ async def run(ctx: ToolContext) -> ToolOutput:
     if not ctx.bin:
         raise ToolNotInstalled("nmap not found (dnf install nmap)")
     argv = build_argv(ctx)
-    res = await run_cmd(argv, timeout=ctx.opts["timeout"] - 2)
+    res = await run_cmd(argv, timeout=proc_timeout(ctx))
     save_raw(ctx, "nmap.xml", res.stdout)
     if res.stderr:
         save_raw(ctx, "nmap.stderr.txt", res.stderr)

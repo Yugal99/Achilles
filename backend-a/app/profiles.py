@@ -1,4 +1,7 @@
-"""Scan profiles. "demo" is trimmed to finish in under 2 minutes on a normal connection."""
+"""Scan profiles. "demo" is trimmed to finish in under 2 minutes on a normal connection.
+
+A "timeout" or "deadline_s" of None means no limit: the tool runs until it exits by itself.
+Only "deep" uses that. The API reports a missing limit as 0."""
 from __future__ import annotations
 
 # Ports vibe-coded apps tend to leave open: databases, caches, dev servers, admin consoles.
@@ -22,7 +25,8 @@ PROFILES: dict[str, dict] = {
             "jscheck": {"timeout": 60, "max_scripts": 25},
             "trufflehog": {"timeout": 40, "max_scripts": 25},
             "retire":  {"timeout": 40, "max_scripts": 25},
-            "arjun":   {"timeout": 5, "skip": "demo profile skips parameter discovery (too slow for 2 min)"},
+            # Capped at 4 endpoints so it fits the deadline; if it still runs long it is cut and marked timeout.
+            "arjun":   {"timeout": 100, "max_scripts": 25, "max_api": 4, "threads": 2, "delay": 0.2},
         },
     },
     "web": {
@@ -58,18 +62,19 @@ PROFILES: dict[str, dict] = {
         },
     },
     "deep": {
-        "description": "All 65535 ports and the full Nuclei template set. Can take 30+ min.",
-        "deadline_s": 3600,
+        "description": "All 65535 ports, the full Nuclei template set and the full TLS test. No time limits: "
+                       "every tool runs until it finishes, so a scan can take an hour or more. Cancel it to stop early.",
+        "deadline_s": None,
         "tools": {
-            "nmap":    {"timeout": 3000, "ports": "-", "host_timeout": "2900s"},
-            "httpx":   {"timeout": 90},
-            "nuclei":  {"timeout": 3000, "tags": "", "severity": "info,low,medium,high,critical",
+            "nmap":    {"timeout": None, "ports": "-", "host_timeout": None},
+            "httpx":   {"timeout": None},
+            "nuclei":  {"timeout": None, "tags": "", "severity": "info,low,medium,high,critical",
                         "rate_limit": 150, "concurrency": 25},
-            "testssl": {"timeout": 900, "args": []},
-            "jscheck": {"timeout": 180, "max_scripts": 120},
-            "trufflehog": {"timeout": 240, "max_scripts": 120},
-            "retire":  {"timeout": 240, "max_scripts": 120},
-            "arjun":   {"timeout": 1200, "max_scripts": 120, "max_api": 8, "threads": 3, "delay": 0.1},
+            "testssl": {"timeout": None, "args": []},
+            "jscheck": {"timeout": None, "max_scripts": 120},
+            "trufflehog": {"timeout": None, "max_scripts": 120},
+            "retire":  {"timeout": None, "max_scripts": 120},
+            "arjun":   {"timeout": None, "max_scripts": 120, "max_api": 8, "threads": 3, "delay": 0.1},
         },
     },
 }

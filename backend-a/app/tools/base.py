@@ -24,6 +24,13 @@ class ToolOutput:
     partial: bool = False  # True when the tool was cut by its timeout but still produced results
 
 
+def proc_timeout(ctx: ToolContext) -> float | None:
+    """Time limit for the tool's subprocess: 2 s under the profile timeout, so the tool is cut and its
+    partial output parsed before the scanner gives up on it. None (the deep profile) means no limit."""
+    t = ctx.opts.get("timeout")
+    return None if t is None else t - 2
+
+
 class ToolSkipped(Exception):
     """Raise to mark a tool as skipped (e.g. no TLS on an http:// target)."""
 

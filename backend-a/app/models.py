@@ -52,6 +52,9 @@ class Finding(BaseModel):
     remediation: str = ""
     references: list[str] = []
     tags: list[str] = []
+    cvss_score: Optional[float] = Field(None, ge=0, le=10, description="CVSS base score (0.0-10.0) as stated by the "
+                                        "tool. null when the tool gives none; Achilles never estimates one.")
+    cvss_vector: str = Field("", description="CVSS vector string, e.g. CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N")
 
     @staticmethod
     def make_id(tool: str, check_id: str, location: str) -> str:

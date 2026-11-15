@@ -6,7 +6,7 @@ import os
 import tempfile
 
 from ..runner import run_cmd
-from .base import ToolContext, ToolNotInstalled, ToolOutput, ToolSkipped, finding, save_raw
+from .base import ToolContext, ToolNotInstalled, ToolOutput, ToolSkipped, finding, save_raw, proc_timeout
 
 TOOL = "testssl"
 # WARN in testssl means "the test itself had a problem", not a target finding, so it is not mapped.
@@ -86,7 +86,7 @@ async def run(ctx: ToolContext) -> ToolOutput:
     os.close(fd)
     os.unlink(jf)  # testssl refuses to overwrite an existing file
     try:
-        res = await run_cmd(build_argv(ctx, jf), timeout=ctx.opts["timeout"] - 2)
+        res = await run_cmd(build_argv(ctx, jf), timeout=proc_timeout(ctx))
         raw = open(jf).read() if os.path.exists(jf) else ""
         # When cut by timeout the json file is unterminated; try to close it.
         if res.timed_out and raw.strip() and not raw.rstrip().endswith("]"):

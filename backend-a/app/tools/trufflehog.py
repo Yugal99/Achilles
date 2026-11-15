@@ -10,7 +10,7 @@ import os
 
 from ..runner import run_cmd
 from . import jsfetch
-from .base import ToolContext, ToolNotInstalled, ToolOutput, ToolSkipped, finding, save_raw
+from .base import ToolContext, ToolNotInstalled, ToolOutput, ToolSkipped, finding, save_raw, proc_timeout
 from .secrets import mask
 
 TOOL = "trufflehog"
@@ -58,7 +58,7 @@ async def run(ctx: ToolContext) -> ToolOutput:
     bundle = await jsfetch.get_bundle(ctx)
     if not bundle.files:
         raise RuntimeError("could not download the page or its scripts")
-    res = await run_cmd(build_argv(ctx, str(bundle.dir)), timeout=ctx.opts["timeout"] - 2,
+    res = await run_cmd(build_argv(ctx, str(bundle.dir)), timeout=proc_timeout(ctx),
                         env={"HOME": os.environ.get("HOME", "/root")})
     save_raw(ctx, "trufflehog.jsonl", res.stdout)
     if res.stderr:
