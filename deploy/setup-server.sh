@@ -30,7 +30,8 @@ if [ ! -f "$APP_DIR/.env" ]; then
   cat > "$APP_DIR/.env" <<EOF
 DOCKERHUB_USER=CHANGE-ME
 ACHILLES_TAG=latest
-ACHILLES_WEB_PORT=80
+ACHILLES_WEB_BIND=127.0.0.1
+ACHILLES_WEB_PORT=3000
 ACHILLES_API_KEY=$KEY
 ACHILLES_MONGODB_URI=
 ACHILLES_MONGODB_DB=achilles
@@ -65,3 +66,5 @@ systemctl reload ssh || systemctl reload sshd
 echo
 echo "Done. Next: edit $APP_DIR/.env (set DOCKERHUB_USER, and the Mongo/AI keys if you use them)."
 echo "Then push to main; GitHub Actions deploys automatically."
+echo "The site listens on 127.0.0.1:3000 only. Make it public over HTTPS with:"
+echo "  bash deploy/setup-https.sh <your-domain>"

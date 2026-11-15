@@ -19,8 +19,10 @@ services:
     environment:
       ACHILLES_API_URL: http://backend:8000/api/v1
       ACHILLES_API_KEY: ${ACHILLES_API_KEY:-}
+    # Behind a reverse proxy (deploy/setup-https.sh) set ACHILLES_WEB_BIND=127.0.0.1 so the app is
+    # reachable only through nginx. Docker-published ports bypass ufw, so this matters.
     ports:
-      - "${ACHILLES_WEB_PORT:-3000}:3000"
+      - "${ACHILLES_WEB_BIND:-0.0.0.0}:${ACHILLES_WEB_PORT:-3000}:3000"
     depends_on:
       backend:
         condition: service_healthy
