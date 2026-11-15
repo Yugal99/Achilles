@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { useState } from 'react'
 import { ArrowRight, Globe, ShieldCheck, Sparkles, BadgeCheck } from 'lucide-react'
-import { normalizeUrl } from '@/lib/achilles-data'
+import { parseTarget } from '@/lib/achilles-data'
 
 const trust = [
   { icon: ShieldCheck, label: 'Safe Scanning', detail: 'Read-only, non-destructive tests' },
@@ -20,19 +20,19 @@ const embers = [
   { left: '70%', top: '90%', delay: '4.2s' },
 ]
 
-export function Hero({ onScan }: { onScan: (host: string) => void }) {
+export function Hero({ onScan, onDemo }: { onScan: (host: string, target: string) => void; onDemo: () => void }) {
   const [value, setValue] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const host = normalizeUrl(value)
-    if (!host) {
+    const parsed = parseTarget(value)
+    if (!parsed) {
       setError('Enter a valid website, like myapp.vercel.app')
       return
     }
     setError(null)
-    onScan(host)
+    onScan(parsed.host, parsed.target)
   }
 
   return (
@@ -116,6 +116,12 @@ export function Hero({ onScan }: { onScan: (host: string) => void }) {
                 {error}
               </p>
             )}
+            <p className="mt-3 px-1 text-sm text-muted-foreground">
+              No app handy?{' '}
+              <button type="button" onClick={onDemo} className="text-gold underline-offset-4 hover:underline">
+                Watch a sample scan
+              </button>
+            </p>
           </form>
 
           <ul

@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
-from . import ownership
+from . import ownership, tips
 from .config import settings
 from .models import SCHEMA_VERSION, ScanResult, ScanStatusView
 from .profiles import PROFILES
@@ -80,6 +80,8 @@ def health():
         "tools": {k: {"installed": bool(v) or settings.fake_tools, "path": v} for k, v in settings.bins.items()}
                  | {"jscheck": {"installed": True, "path": "builtin"}},
         "queue": {"waiting": len(manager.waiting), "running": len(manager.tasks)},
+        # Which AI providers have a key (names only, never the keys). Rules are always the last fallback.
+        "ai": {"order": tips.provider_order(), "configured": tips.configured_providers(), "fallback": "rules"},
     }
 
 
@@ -163,6 +165,16 @@ def scan_status(scan_id: str):
 @app.get("/api/v1/scans/{scan_id}/results", response_model=ScanResult, dependencies=[Auth])
 def scan_results(scan_id: str):
     return _get(scan_id)
+
+
+@app.get("/api/v1/scans/{scan_id}/tips", dependencies=[Auth])
+def scan_tips(scan_id: str, refresh: bool = False):
+    """Plain-English fixes per finding: Grok -> Gemini -> Claude -> built-in rules. Cached per scan.
+    Sync on purpose: FastAPI runs it in a worker thread, so the slow provider calls do not block other requests."""
+    s = _get(scan_id)
+    if s.status not in ("completed", "partial"):
+        raise ApiError(409, "scan_not_finished", f"scan is {s.status}; tips are available once it is completed or partial")
+    return tips.get_tips(s, settings.data_dir / "tips", refresh=refresh)
 
 
 @app.delete("/api/v1/scans/{scan_id}", dependencies=[Auth])

@@ -1,4 +1,4 @@
-"""testssl.sh: certificate and protocol checks (Kali binary is `testssl`)."""
+"""testssl.sh: certificate and protocol checks (Fedora/Kali binary is `testssl`)."""
 from __future__ import annotations
 
 import json
@@ -81,7 +81,7 @@ async def run(ctx: ToolContext) -> ToolOutput:
     if ctx.target.scheme != "https":
         raise ToolSkipped("target is http://, no TLS to test")
     if not ctx.bin:
-        raise ToolNotInstalled("testssl not found (apt install testssl.sh)")
+        raise ToolNotInstalled("testssl not found (dnf install testssl)")
     fd, jf = tempfile.mkstemp(prefix="achilles-testssl-", suffix=".json")
     os.close(fd)
     os.unlink(jf)  # testssl refuses to overwrite an existing file

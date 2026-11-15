@@ -1,4 +1,4 @@
-"""ProjectDiscovery httpx: tech stack fingerprint (Kali binary is usually `httpx-toolkit`)."""
+"""ProjectDiscovery httpx: tech stack fingerprint (binary is `httpx` from go install, or `httpx-toolkit` on Kali)."""
 from __future__ import annotations
 
 import json
@@ -51,7 +51,7 @@ def parse(stdout: str, url: str) -> tuple[Stack, list]:
 
 async def run(ctx: ToolContext) -> ToolOutput:
     if not ctx.bin:
-        raise ToolNotInstalled("ProjectDiscovery httpx not found (apt install httpx-toolkit)")
+        raise ToolNotInstalled("ProjectDiscovery httpx not found (go install github.com/projectdiscovery/httpx/cmd/httpx@latest)")
     res = await run_cmd(build_argv(ctx), timeout=ctx.opts["timeout"] - 2)
     save_raw(ctx, "httpx.jsonl", res.stdout)
     stack, findings = parse(res.stdout, ctx.target.url)

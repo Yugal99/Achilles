@@ -112,7 +112,7 @@ def parse(xml_text: str, host: str, app_port: int = 443) -> list:
 
 async def run(ctx: ToolContext) -> ToolOutput:
     if not ctx.bin:
-        raise ToolNotInstalled("nmap not found (apt install nmap)")
+        raise ToolNotInstalled("nmap not found (dnf install nmap)")
     argv = build_argv(ctx)
     res = await run_cmd(argv, timeout=ctx.opts["timeout"] - 2)
     save_raw(ctx, "nmap.xml", res.stdout)

@@ -1,5 +1,5 @@
 """Fake mode (ACHILLES_FAKE_TOOLS=1): realistic canned output so the frontend and Backend B
-can be built off-Kali. Each tool "finishes" after a short delay, so progress polling looks real."""
+can be built without the scanner tools. Each tool "finishes" after a short delay, so progress polling looks real."""
 from __future__ import annotations
 
 import asyncio

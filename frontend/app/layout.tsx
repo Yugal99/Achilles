@@ -35,7 +35,7 @@ export default function RootLayout({
     <html lang="en" className={`${cinzel.variable} ${inter.variable} bg-background`}>
       <body className="antialiased">
         {children}
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        {process.env.VERCEL && <Analytics />}
       </body>
     </html>
   )
