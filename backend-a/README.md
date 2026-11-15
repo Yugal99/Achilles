@@ -82,7 +82,7 @@ Check it from inside the VM:
 curl -s localhost:8000/api/v1/health | jq
 ```
 
-All five tools should show `"installed": true`. The interactive docs are at `http://localhost:8000/docs`.
+All eight tools should show `"installed": true`. The interactive docs are at `http://localhost:8000/docs`.
 
 ### Step 6. Test a scan against the seeded vulnerable app (safe, local)
 
@@ -197,7 +197,7 @@ They run without any tools installed (parsers use sample output; the API tests u
 
 ## Demo-day checklist
 
-- [ ] Host/VM up, `./run.sh` running, `/api/v1/health` shows all five tools installed.
+- [ ] Host/VM up, `./run.sh` running, `/api/v1/health` shows all eight tools installed.
 - [ ] Demo target is an app **you own**, verified in the last 24 h (re-run `verify.sh check` that morning). The seeded `lab/vuln_app.py` deployed on your demo domain makes a great target: guaranteed critical findings.
 - [ ] Run one full demo scan 10 minutes before you present (warms DNS and Nuclei's template cache). Demo profile finishes well under 2 minutes; the hard cap is 110 s.
 - [ ] **Backup plan:** if Wi-Fi dies, set `ACHILLES_FAKE_TOOLS=1` in `.env` and restart. The API returns realistic canned results (~10 s) in the exact same format, so the frontend works unchanged.

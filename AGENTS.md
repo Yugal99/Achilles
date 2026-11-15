@@ -44,7 +44,7 @@ frontend/
 
 ## Running locally
 
-**Backend.** Real scans need Linux with the tools installed (see `backend-a/setup_kali.sh`). On Windows or macOS, or without the tools, use fake mode.
+**Backend.** Real scans need Linux with the tools installed (`backend-a/setup_ubuntu.sh` or `setup_fedora.sh`), or use the Docker image, which has them all. On Windows or macOS, or without the tools, use fake mode.
 
 ```bash
 cd backend-a
