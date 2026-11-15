@@ -33,13 +33,15 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 const post = (path: string, data: unknown) => call(path, { method: 'POST', body: JSON.stringify(data) })
 
 export const api = {
-  health: () => call<{ ok: boolean; fake_tools: boolean }>('health'),
+  health: () => call<{ ok: boolean; fake_tools: boolean; storage?: 'mongodb' | 'files' }>('health'),
   challenge: (target: string) => post('ownership/challenge', { target }) as Promise<OwnershipChallenge>,
   verify: (target: string) => post('ownership/verify', { target }) as Promise<OwnershipVerify>,
   ownership: (host: string) => call<{ host: string; verified: boolean; lab_target: boolean }>(`ownership/${encodeURIComponent(host)}`),
   startScan: (target: string, profile = 'demo') =>
     post('scans', { target, profile }) as Promise<{ scan_id: string; status: string }>,
   status: (id: string) => call<ScanStatusView>(`scans/${id}`),
+  /** Earlier scans of a verified host, newest first (persisted in MongoDB when the scanner has it configured). */
+  hostScans: (host: string) => call<ScanStatusView[]>(`hosts/${encodeURIComponent(host)}/scans`),
   results: (id: string) => call<ScanResult>(`scans/${id}/results`),
   tips: (id: string) => call<TipsResponse>(`scans/${id}/tips`),
   cancel: (id: string) => call<{ cancelled: boolean }>(`scans/${id}`, { method: 'DELETE' }),

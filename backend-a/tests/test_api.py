@@ -90,3 +90,20 @@ def test_web_profile_skips_nmap():
         assert all(s["tools"][t]["status"] == "ok" for t in ("httpx", "nuclei", "testssl", "jscheck"))
         res = c.get(f"/api/v1/scans/{s['scan_id']}/results", headers=H).json()
         assert not any(f["tool"] == "nmap" for f in res["findings"])
+
+
+def test_host_history_newest_first_and_gated():
+    with TestClient(app) as c:
+        ids = []
+        for _ in range(2):
+            sid = c.post("/api/v1/scans", json={"target": "https://lab.test"}, headers=H).json()["scan_id"]
+            wait(c, sid)
+            ids.append(sid)
+        hist = c.get("/api/v1/hosts/lab.test/scans", headers=H).json()
+        got = [h["scan_id"] for h in hist]
+        assert got.index(ids[1]) < got.index(ids[0])  # newest first
+        assert all(h["target"]["host"] == "lab.test" for h in hist)
+        assert "findings" not in hist[0] and "summary" in hist[0]
+        r = c.get("/api/v1/hosts/unverified.example/scans", headers=H)
+        assert r.status_code == 403 and r.json()["error"]["code"] == "ownership_not_verified"
+        assert c.get("/api/v1/hosts/lab.test/scans").status_code == 401

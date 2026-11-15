@@ -80,6 +80,7 @@ def health():
         "tools": {k: {"installed": bool(v) or settings.fake_tools, "path": v} for k, v in settings.bins.items()}
                  | {"jscheck": {"installed": True, "path": "builtin"}},
         "queue": {"waiting": len(manager.waiting), "running": len(manager.tasks)},
+        "storage": "mongodb" if manager.db else "files",
         # Which AI providers have a key (names only, never the keys). Rules are always the last fallback.
         "ai": {"order": tips.provider_order(), "configured": tips.configured_providers(), "fallback": "rules"},
     }
@@ -157,6 +158,16 @@ def list_scans(limit: int = 50):
     return [_view(s) for s in manager.list(limit)]
 
 
+@app.get("/api/v1/hosts/{host}/scans", response_model=list[ScanStatusView], dependencies=[Auth])
+def host_scans(host: str, limit: int = 20):
+    """Scan history for one host, newest first. Only for hosts whose ownership is currently proven
+    (or lab targets), so one person can't browse the scan history of an app they don't control."""
+    host = host.lower().strip()
+    if not (is_lab_target(host) or settings.skip_ownership or ownership.is_verified(host)):
+        raise ApiError(403, "ownership_not_verified", f"Verify ownership of {host} to see its scan history.")
+    return [_view(s) for s in manager.for_host(host, max(1, min(limit, 50)))]
+
+
 @app.get("/api/v1/scans/{scan_id}", response_model=ScanStatusView, dependencies=[Auth])
 def scan_status(scan_id: str):
     return _view(_get(scan_id))
@@ -174,7 +185,7 @@ def scan_tips(scan_id: str, refresh: bool = False):
     s = _get(scan_id)
     if s.status not in ("completed", "partial"):
         raise ApiError(409, "scan_not_finished", f"scan is {s.status}; tips are available once it is completed or partial")
-    return tips.get_tips(s, settings.data_dir / "tips", refresh=refresh)
+    return tips.get_tips(s, settings.data_dir / "tips", refresh=refresh, db=manager.db)
 
 
 @app.delete("/api/v1/scans/{scan_id}", dependencies=[Auth])

@@ -113,26 +113,3 @@ export const demoScan: ScanResult = {
   error: '',
 }
 
-/** Log lines replayed during the demo scan, paired with the finding they announce. */
-export const demoScanLog = [
-  'GET / → 200 · 14 routes discovered',
-  'Found sitemap.xml · 22 URLs queued',
-  'nmap: 2 open ports (80, 443) · nothing sensitive exposed',
-  'Parsing 9 JS chunks (1.4 MB)',
-  'Pattern match: eyJhbGciOiJIUzI1Ni… (JWT, role=service_role)',
-  'Flagged · secret in client bundle',
-  'Probing /api/admin/users without session…',
-  'Response 200 · 1,284 records returned',
-  'Flagged · missing auth guard',
-  'Querying public.profiles with anon role…',
-  'Flagged · RLS disabled',
-  '20 rapid login attempts → no 429 received',
-  'Flagged · no rate limit',
-  'Inspecting response headers on 14 routes',
-  'Flagged · CSP / HSTS missing',
-  'POST /api/checkout malformed body → stack trace',
-  'Flagged · verbose errors',
-  'testssl: TLS 1.2 / 1.3 only · certificate valid',
-  'Oracle drafting 6 fix prompts…',
-  'Scan complete · 6 findings',
-]

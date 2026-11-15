@@ -12,6 +12,8 @@ const ALLOWED: Array<{ method: string; pattern: RegExp }> = [
   { method: 'GET', pattern: /^ownership\/[A-Za-z0-9.\-:]+$/ },
   { method: 'POST', pattern: /^scans$/ },
   { method: 'GET', pattern: /^scans\/scn_[a-f0-9]+(\/results|\/tips)?$/ },
+  // Scan history for one host. The scanner only answers for hosts whose ownership is proven.
+  { method: 'GET', pattern: /^hosts\/[A-Za-z0-9.\-:]+\/scans$/ },
   { method: 'DELETE', pattern: /^scans\/scn_[a-f0-9]+$/ },
 ]
 

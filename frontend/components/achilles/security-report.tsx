@@ -10,33 +10,34 @@ import { ScoreRing } from './results-dashboard'
 import { SeverityBadge } from './severity-badge'
 import { CopyButton } from './copy-button'
 import { cn } from '@/lib/utils'
+import { btn } from './kit'
 
 function PromptCard({ finding }: { finding: Finding }) {
   return (
-    <article className="rounded-lg border border-border bg-background p-5">
+    <article className="rounded-xl border border-border bg-card p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <SeverityBadge severity={finding.severity} />
-          <span className="font-serif text-sm italic text-gold/80">{finding.epithet}</span>
+          <span className="text-xs text-muted-foreground">{finding.category}</span>
         </div>
         <CopyButton text={finding.fixPrompt} label="Copy fix prompt" />
       </div>
-      <h3 className="mt-3 text-base font-medium">{finding.title}</h3>
+      <h3 className="mt-3 text-base font-semibold text-navy">{finding.title}</h3>
       <p className="mt-1 text-sm text-muted-foreground">{finding.summary}</p>
-      <p className="mt-4 border-l-2 border-gold/40 pl-4 text-sm leading-relaxed text-foreground/80">{finding.fixPrompt}</p>
+      <p className="mt-4 border-l-2 border-aegean/40 pl-4 text-sm leading-relaxed text-navy/85">{finding.fixPrompt}</p>
     </article>
   )
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="rounded-lg border border-border bg-background p-5 text-sm text-muted-foreground">{text}</p>
+  return <p className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">{text}</p>
 }
 
 function SlideHeader({ eyebrow, title, body }: { eyebrow: string; title: string; body?: string }) {
   return (
     <header>
-      <p className="text-xs uppercase tracking-[0.3em] text-gold">{eyebrow}</p>
-      <h2 className="mt-3 font-serif text-2xl font-semibold text-balance sm:text-3xl">{title}</h2>
+      <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.14em] text-primary uppercase"><span className="h-px w-6 bg-gold" aria-hidden="true" />{eyebrow}</p>
+      <h2 className="mt-3 text-2xl font-semibold tracking-tight text-balance text-navy sm:text-3xl">{title}</h2>
       {body && <p className="mt-2 max-w-2xl text-muted-foreground">{body}</p>}
     </header>
   )
@@ -62,15 +63,15 @@ export function SecurityReport({ scan, tips, onBack }: { scan: ScanResult; tips?
           <ScoreRing score={securityScoreOf(scan)} grade={scan.summary.grade} size={180} />
           <div>
             <SlideHeader
-              eyebrow="I · The Prophecy"
+              eyebrow="01 · Overview"
               title={`${host}: ${verdict.label.toLowerCase()}.`}
-              body={`Achilles found ${findings.length} weakness${findings.length === 1 ? '' : 'es'}. ${verdict.text}`}
+              body={`ACHILLES found ${findings.length} weakness${findings.length === 1 ? '' : 'es'}. ${verdict.text}`}
             />
             <dl className="mt-8 grid grid-cols-4 gap-3">
               {(Object.keys(counts) as Array<keyof typeof counts>).map((s) => (
-                <div key={s} className="rounded-md border border-border p-3">
-                  <dt className={cn('text-[11px] uppercase tracking-wider', severityMeta[s].text)}>{severityMeta[s].label}</dt>
-                  <dd className="mt-1 font-serif text-2xl">{counts[s]}</dd>
+                <div key={s} className="rounded-lg border border-border p-3">
+                  <dt className={cn('text-xs font-semibold', severityMeta[s].text)}>{severityMeta[s].label}</dt>
+                  <dd className="mt-1 text-2xl font-semibold text-navy tabular-nums">{counts[s]}</dd>
                 </div>
               ))}
             </dl>
@@ -83,7 +84,7 @@ export function SecurityReport({ scan, tips, onBack }: { scan: ScanResult; tips?
       content: (
         <div>
           <SlideHeader
-            eyebrow="II · Your Achilles' heel"
+            eyebrow="02 · Your Achilles' heel"
             title={critical.length ? 'Fix this before anything else.' : 'No critical flaws.'}
             body="Critical issues give anyone control of your data. Paste each prompt into your AI builder, then rotate any exposed key."
           />
@@ -101,7 +102,7 @@ export function SecurityReport({ scan, tips, onBack }: { scan: ScanResult; tips?
       content: (
         <div>
           <SlideHeader
-            eyebrow="III · Breaches in the wall"
+            eyebrow="03 · High risk"
             title={high.length ? `${high.length} high-risk opening${high.length === 1 ? '' : 's'}.` : 'No high-risk openings.'}
             body="These let attackers read private user data or reach admin-only features."
           />
@@ -119,7 +120,7 @@ export function SecurityReport({ scan, tips, onBack }: { scan: ScanResult; tips?
       content: (
         <div>
           <SlideHeader
-            eyebrow="IV · Reinforce the armor"
+            eyebrow="04 · Hardening"
             title="Smaller cracks worth sealing."
             body="Not urgent on their own, but attackers chain small issues together."
           />
@@ -133,32 +134,32 @@ export function SecurityReport({ scan, tips, onBack }: { scan: ScanResult; tips?
       ),
     },
     {
-      title: 'Battle Plan',
+      title: "Fix Plan",
       content: (
         <div>
           <SlideHeader
-            eyebrow="V · The battle plan"
-            title="Your path to invulnerable."
-            body="Work top to bottom, or copy the full plan as one prompt for your AI builder."
+            eyebrow="05 · Fix plan"
+            title="Your route to a safer app."
+            body="Work top to bottom, or copy the full plan as one prompt for your AI builder. Rescan afterwards to confirm each fix."
           />
           <ol className="mt-8 flex flex-col divide-y divide-border rounded-lg border border-border">
             {findings.map((f, i) => (
               <li key={f.id} className="flex items-center gap-4 px-5 py-3.5">
-                <span className="font-serif text-sm text-gold">{i + 1}</span>
-                <span className="min-w-0 flex-1 truncate text-sm">{f.title}</span>
+                <span className="font-mono text-sm text-gold-ink">{i + 1}</span>
+                <span className="min-w-0 flex-1 truncate text-sm text-navy">{f.title}</span>
                 <SeverityBadge severity={f.severity} className="hidden sm:inline-flex" />
               </li>
             ))}
           </ol>
-          <div className="mt-6 flex flex-col items-start justify-between gap-4 rounded-lg border border-gold/40 bg-gold-soft p-5 sm:flex-row sm:items-center">
+          <div className="mt-6 flex flex-col items-start justify-between gap-4 rounded-xl border border-aegean/25 bg-sky/40 p-5 sm:flex-row sm:items-center">
             <div className="flex items-center gap-3">
-              <Swords className="size-5 text-gold" aria-hidden="true" />
+              <Swords className="size-5 text-primary" aria-hidden="true" />
               <div>
-                <p className="text-sm font-medium">Fix everything in one prompt</p>
+                <p className="text-sm font-semibold text-navy">Fix everything in one prompt</p>
                 <p className="text-xs text-muted-foreground">{findings.length} fix{findings.length === 1 ? '' : 'es'}, most severe first</p>
               </div>
             </div>
-            <CopyButton text={battlePlan} label="Copy full battle plan" className="bg-gold text-primary-foreground hover:brightness-110" />
+            <CopyButton text={battlePlan} label="Copy full fix plan" variant="solid" />
           </div>
           <div className="mt-6">
             <ExportMenu scan={scan} findings={findings} />
@@ -187,21 +188,21 @@ export function SecurityReport({ scan, tips, onBack }: { scan: ScanResult; tips?
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-navy"
         >
           <ArrowLeft className="size-4" aria-hidden="true" /> Back to results
         </button>
         <p className="text-sm text-muted-foreground">
-          Slide <span className="text-foreground">{index + 1}</span> of {slides.length}
+          Slide <span className="font-semibold text-navy">{index + 1}</span> of {slides.length}
         </p>
       </div>
 
       <section
         aria-roledescription="carousel"
         aria-label="Security report"
-        className="relative mt-6 overflow-hidden rounded-xl border border-border bg-card"
+        className="relative mt-6 overflow-hidden rounded-2xl border border-border bg-card shadow-[0_20px_60px_-40px_rgb(16_42_67/0.45)]"
       >
-        <div className="greek-rule absolute inset-x-0 top-0" aria-hidden="true" />
+        <div className="meander absolute inset-x-0 top-3" aria-hidden="true" />
         <div
           key={index}
           role="group"
@@ -218,7 +219,7 @@ export function SecurityReport({ scan, tips, onBack }: { scan: ScanResult; tips?
           type="button"
           onClick={() => go(index - 1)}
           disabled={index === 0}
-          className="flex h-10 items-center gap-1 rounded-md border border-border px-4 text-sm transition-colors hover:border-gold/40 disabled:opacity-30"
+          className={btn.sm}
         >
           <ChevronLeft className="size-4" aria-hidden="true" /> Previous
         </button>
@@ -230,7 +231,7 @@ export function SecurityReport({ scan, tips, onBack }: { scan: ScanResult; tips?
               onClick={() => go(i)}
               aria-label={`Go to slide ${i + 1}: ${s.title}`}
               aria-current={i === index ? 'true' : undefined}
-              className={cn('h-1.5 rounded-full transition-all', i === index ? 'w-8 bg-gold' : 'w-3 bg-muted-foreground/40 hover:bg-muted-foreground')}
+              className={cn('h-1.5 rounded-full transition-all', i === index ? 'w-8 bg-aegean' : 'w-3 bg-border hover:bg-muted-foreground')}
             />
           ))}
         </div>
@@ -238,7 +239,7 @@ export function SecurityReport({ scan, tips, onBack }: { scan: ScanResult; tips?
           type="button"
           onClick={() => go(index + 1)}
           disabled={index === last}
-          className="flex h-10 items-center gap-1 rounded-md bg-gold px-4 text-sm font-semibold text-primary-foreground hover:brightness-110 disabled:opacity-30"
+          className={cn(btn.primary, "h-9 px-4")}
         >
           Next <ChevronRight className="size-4" aria-hidden="true" />
         </button>

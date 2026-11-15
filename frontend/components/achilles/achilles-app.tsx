@@ -2,16 +2,26 @@
 
 import { useEffect, useState } from 'react'
 import { SiteNav } from './site-nav'
+import { SiteFooter } from './site-footer'
 import { Hero } from './hero'
-import { HowItWorks } from './how-it-works'
+import {
+  ArchitectureSection,
+  DashboardPreviewSection,
+  FeaturesSection,
+  FinalCta,
+  OdysseySection,
+  RemediationSection,
+  TrustSection,
+  WhySection,
+} from './landing-sections'
 import { FlowStepper } from './flow-stepper'
 import { VerifyStep } from './verify-step'
 import { ScanStep } from './scan-step'
 import { ResultsDashboard } from './results-dashboard'
 import { SecurityReport } from './security-report'
-import { Logo } from './logo'
 import { DEMO_HOST } from '@/lib/demo-scan'
-import type { ScanResult, TipsResponse } from '@/lib/scan-types'
+import type { ScanResult, ScanStatusView } from '@/lib/scan-types'
+import type { TipsState } from '@/lib/insights'
 import { api } from '@/lib/api'
 
 type Step = 'landing' | 'verify' | 'scan' | 'results' | 'report'
@@ -26,25 +36,68 @@ export function AchillesApp() {
   const [mode, setMode] = useState<Mode>('demo')
   const [scan, setScan] = useState<ScanResult | null>(null)
   const [scanKey, setScanKey] = useState(0)
-  const [tips, setTips] = useState<TipsResponse | null>(null)
-  const [tipsLoading, setTipsLoading] = useState(false)
+  const [tipsState, setTipsState] = useState<TipsState>({ kind: 'idle' })
+  const [scannerFake, setScannerFake] = useState(false)
+  // Stored scans of the current host (from the scanner, durable in MongoDB) and the one before this scan.
+  const [history, setHistory] = useState<ScanStatusView[] | null>(null)
+  const [previous, setPrevious] = useState<ScanResult | null>(null)
+
+  // Ask the scanner whether it is in fake mode, so canned live results are labeled as such.
+  useEffect(() => {
+    if (mode !== 'live') return
+    api
+      .health()
+      .then((h) => setScannerFake(!!h.fake_tools))
+      .catch(() => {})
+  }, [mode])
 
   // After a live scan, ask the server for AI-written fixes (Grok → Gemini → Claude → rules).
   // The dashboard renders instantly with the built-in rule cards and upgrades when this returns.
   useEffect(() => {
-    setTips(null)
+    setTipsState({ kind: 'idle' })
     if (mode !== 'live' || !scan || !['completed', 'partial'].includes(scan.status)) return
     let cancelled = false
-    setTipsLoading(true)
+    setTipsState({ kind: 'loading' })
     api
       .tips(scan.scan_id)
-      .then((t) => !cancelled && setTips(t))
-      .catch(() => {}) // rule-based cards stay; the tips layer is an upgrade, never a requirement
-      .finally(() => !cancelled && setTipsLoading(false))
+      .then((t) => !cancelled && setTipsState({ kind: 'ready', tips: t }))
+      .catch(() => !cancelled && setTipsState({ kind: 'error' }))
     return () => {
       cancelled = true
     }
   }, [scan, mode])
+
+  // Load this host's stored history whenever a live report is shown, then the previous scan in full.
+  useEffect(() => {
+    setHistory(null)
+    setPrevious(null)
+    if (mode !== 'live' || !scan) return
+    let cancelled = false
+    ;(async () => {
+      const list = await api.hostScans(scan.target.host).catch(() => [] as ScanStatusView[])
+      if (cancelled) return
+      setHistory(list)
+      const before = list.find(
+        (h) => h.scan_id !== scan.scan_id && ['completed', 'partial'].includes(h.status) && (h.created_at ?? '') < (scan.created_at ?? ''),
+      )
+      if (!before) return
+      const full = await api.results(before.scan_id).catch(() => null)
+      if (!cancelled) setPrevious(full)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [scan, mode])
+
+  /** Show a stored report instead of scanning again. Throws so the caller can show the error. */
+  async function openScan(scanId: string) {
+    const result = await api.results(scanId)
+    setMode('live')
+    setHost(result.target.host)
+    setTarget(`${result.target.scheme}://${result.target.host}${[80, 443].includes(result.target.port) ? '' : `:${result.target.port}`}`)
+    setScan(result)
+    goTo('results')
+  }
 
   function goTo(next: Step) {
     setStep(next)
@@ -68,57 +121,71 @@ export function AchillesApp() {
     goTo('verify')
   }
 
-  function showHowItWorks() {
+  function whenOnLanding(fn: () => void) {
     if (step !== 'landing') {
       setStep('landing')
-      requestAnimationFrame(() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }))
-      return
-    }
-    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })
+      setTimeout(fn, 50)
+    } else fn()
   }
+
+  const showSection = (id: string) => whenOnLanding(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }))
+  const focusScanner = () =>
+    whenOnLanding(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      setTimeout(() => document.getElementById('scan-url')?.focus({ preventScroll: true }), 300)
+    })
+
 
   return (
     <>
-      <SiteNav onHome={() => goTo('landing')} onHowItWorks={showHowItWorks} onDemo={startDemo} />
-      <main>
+      <a href="#main" className="sr-only z-[60] rounded-md bg-white px-3 py-2 text-sm focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
+        Skip to content
+      </a>
+      <SiteNav onHome={() => goTo('landing')} onSection={showSection} onDemo={startDemo} onScan={focusScanner} />
+      <main id="main">
         {step === 'landing' ? (
           <>
             <Hero onScan={startScan} onDemo={startDemo} />
-            <HowItWorks />
+            <WhySection />
+            <OdysseySection />
+            <DashboardPreviewSection onDemo={startDemo} />
+            <FeaturesSection />
+            <RemediationSection />
+            <ArchitectureSection />
+            <TrustSection />
+            <FinalCta onScan={focusScanner} />
           </>
         ) : (
-          <div className="relative min-h-svh px-5 pb-20 pt-28">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-96 bg-[radial-gradient(ellipse_at_top,var(--gold-soft),transparent_70%)]"
-            />
+          <div className="relative min-h-svh px-4 pt-28 pb-20 sm:px-6">
+            <div aria-hidden="true" className="atlas-grid pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
             <FlowStepper current={stepIndex[step]} />
             <div key={`${step}-${scanKey}`} className="animate-fade-up mt-12">
               {step === 'verify' && (
-                <VerifyStep host={host} target={target} mode={mode} onVerified={() => goTo('scan')} onUseDemo={startDemo} />
+                <VerifyStep host={host} target={target} mode={mode} onVerified={() => goTo('scan')} onUseDemo={startDemo} onOpenScan={openScan} />
               )}
               {step === 'scan' && (
                 <ScanStep
                   host={host}
                   target={target}
                   mode={mode}
+                  scannerFake={scannerFake}
                   onComplete={(result) => {
                     setScan(result)
                     goTo('results')
                   }}
                   onBack={() => goTo('verify')}
-                  onUseDemo={() => {
-                    setMode('demo')
-                    setHost(DEMO_HOST)
-                    setScanKey((k) => k + 1)
-                  }}
+                  onUseDemo={startDemo}
                 />
               )}
               {step === 'results' && scan && (
                 <ResultsDashboard
                   scan={scan}
-                  tips={tips}
-                  tipsLoading={tipsLoading}
+                  mode={mode}
+                  scannerFake={scannerFake}
+                  tipsState={tipsState}
+                  history={mode === 'live' ? history : []}
+                  previous={mode === 'live' ? previous : null}
+                  onOpenScan={openScan}
                   onOpenReport={() => goTo('report')}
                   onRescan={() => {
                     setScanKey((k) => k + 1)
@@ -126,17 +193,14 @@ export function AchillesApp() {
                   }}
                 />
               )}
-              {step === 'report' && scan && <SecurityReport scan={scan} tips={tips} onBack={() => goTo('results')} />}
+              {step === 'report' && scan && (
+                <SecurityReport scan={scan} tips={tipsState.kind === 'ready' ? tipsState.tips : null} onBack={() => goTo('results')} />
+              )}
             </div>
           </div>
         )}
       </main>
-      <footer className="border-t border-border/60">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 text-xs text-muted-foreground sm:flex-row">
-          <Logo className="scale-90" />
-          <p>Only scan apps you own. The sample scan uses canned data.</p>
-        </div>
-      </footer>
+      <SiteFooter onSection={showSection} onDemo={startDemo} />
     </>
   )
 }
