@@ -1,15 +1,16 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Cinzel, Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
-const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' })
+const cinzel = Cinzel({ subsets: ['latin'], weight: ['600', '700'], variable: '--font-cinzel' })
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains-mono' })
 
 export const metadata: Metadata = {
-  title: 'ACHILLES · Find your weakness before attackers do',
+  title: 'ACHILLES · Every app has a weak point',
   description:
-    'Scan an application you own, uncover security weaknesses with real tools, and get actionable AI-assisted fixes you can paste into your coding tool.',
+    'A security scanner for web apps you own. Achilles runs real tools against your site, shows what they found, and writes fixes you can paste into your AI coding tool.',
   icons: {
     icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
     apple: '/apple-icon.png',
@@ -17,8 +18,8 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'light',
-  themeColor: '#f8fbfd',
+  colorScheme: 'dark',
+  themeColor: '#0b141f',
 }
 
 export default function RootLayout({
@@ -27,8 +28,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${geist.variable} ${geistMono.variable} bg-background`}>
-      <body className="antialiased">
+    <html
+      lang="en"
+      className={`${cinzel.variable} ${inter.variable} ${jetbrainsMono.variable} bg-background`}
+      suppressHydrationWarning
+    >
+      {/* Browser extensions add attributes to <html> and <body> before React hydrates. */}
+      <body className="antialiased" suppressHydrationWarning>
         {children}
         {process.env.VERCEL && <Analytics />}
       </body>

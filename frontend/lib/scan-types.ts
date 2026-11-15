@@ -1,6 +1,6 @@
 // Mirrors backend-a/docs/SCHEMA.md (ScanResult v1.0). Unknown fields are ignored.
 export type ApiSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info'
-export type ToolName = 'nmap' | 'httpx' | 'nuclei' | 'testssl' | 'jscheck'
+export type ToolName = 'nmap' | 'httpx' | 'nuclei' | 'testssl' | 'jscheck' | 'trufflehog' | 'retire' | 'arjun'
 export type ToolStatus = 'pending' | 'running' | 'ok' | 'timeout' | 'error' | 'skipped' | 'not_installed'
 export type ScanStatus = 'queued' | 'running' | 'completed' | 'partial' | 'failed' | 'cancelled'
 
@@ -17,11 +17,16 @@ export type ApiFinding = {
   remediation: string
   references: string[]
   tags: string[]
+  /** CVSS base score (0.0 to 10.0) as stated by the tool. null when it gives none; scans stored before this field existed omit it. */
+  cvss_score?: number | null
+  /** CVSS vector string. Empty when the tool gives none. */
+  cvss_vector?: string
 }
 
 export type ToolRun = {
   status: ToolStatus
   duration_s: number | null
+  /** Seconds. 0 means no limit (deep scans). */
   timeout_s: number
   findings_count: number
   message: string

@@ -45,6 +45,8 @@ This is the unit Backend B explains and the deck shows.
 | `remediation` | string | How to fix, may be empty |
 | `references` | string[] | Links (CWE, docs) |
 | `tags` | string[] | Free-form tags from the tool |
+| `cvss_score` | number or null | CVSS base score, 0.0 to 10.0, as stated by the tool. Today only Nuclei templates carry one, so it is `null` for every other tool and for templates without a score. Achilles never estimates a score, and `severity` does not depend on it |
+| `cvss_vector` | string | CVSS vector, e.g. `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N`. Empty when the tool gives none. A template can state a vector without a score |
 
 ### `category` values
 
@@ -73,7 +75,7 @@ This is the unit Backend B explains and the deck shows.
 | `status` | enum | `pending` · `running` · `ok` · `timeout` (hit its time limit; any results it found are still included) · `error` · `skipped` (e.g. testssl on an `http://` target) · `not_installed` |
 | `started_at` / `finished_at` | datetime or null | |
 | `duration_s` | number or null | |
-| `timeout_s` | int | This tool's limit in the chosen profile |
+| `timeout_s` | int | This tool's limit in the chosen profile. `0` means no limit (the `deep` profile) |
 | `findings_count` | int | Findings from this tool after de-duplication |
 | `message` | string | Human-readable one-liner, e.g. `"3 open ports"`, `"nuclei not found (dnf install ...)"`. Good for "which checks were cut short" in the deck |
 | `command` | string | Exact command line that ran (for the "how we tested" slide / Q&A) |

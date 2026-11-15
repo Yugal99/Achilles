@@ -1,4 +1,4 @@
-"""Run an external tool with a hard timeout, keeping whatever output it produced."""
+"""Run an external tool, with a hard timeout unless the profile sets none, keeping whatever output it produced."""
 from __future__ import annotations
 
 import asyncio
@@ -17,8 +17,9 @@ class ProcResult:
     command: str
 
 
-async def run_cmd(argv: list[str], timeout: float, env: dict | None = None) -> ProcResult:
-    """Start argv in its own process group. On timeout (or cancel) kill the whole group,
+async def run_cmd(argv: list[str], timeout: float | None, env: dict | None = None) -> ProcResult:
+    """Start argv in its own process group. timeout=None waits for the tool to exit by itself.
+    On timeout (or cancel) kill the whole group,
     and return the stdout collected so far so streaming tools (nuclei, httpx) still yield results."""
     cmd_str = " ".join(shlex.quote(a) for a in argv)
     proc = await asyncio.create_subprocess_exec(

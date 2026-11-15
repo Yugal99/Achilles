@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 from ..runner import run_cmd
-from .base import ToolContext, ToolNotInstalled, ToolOutput, finding, save_raw
+from .base import ToolContext, ToolNotInstalled, ToolOutput, finding, save_raw, proc_timeout
 from .secrets import mask
 
 TOOL = "nuclei"
@@ -60,6 +60,22 @@ def build_argv(ctx: ToolContext) -> list[str]:
     return argv
 
 
+def _cvss(info: dict) -> tuple[float | None, str]:
+    """CVSS base score and vector from the template's classification block. Either can be missing."""
+    c = info.get("classification")
+    if not isinstance(c, dict):
+        return None, ""
+    try:
+        score = round(float(c.get("cvss-score")), 1)
+    except (TypeError, ValueError):
+        score = None
+    if score is not None and not 0 <= score <= 10:
+        score = None
+    vector = c.get("cvss-metrics")
+    vector = vector.strip()[:120] if isinstance(vector, str) and vector.strip().upper().startswith("CVSS:") else ""
+    return score, vector
+
+
 def parse(stdout: str) -> list:
     findings = {}
     for line in stdout.splitlines():
@@ -87,11 +103,13 @@ def parse(stdout: str) -> list:
         refs = info.get("reference") or []
         if isinstance(refs, str):
             refs = [refs]
+        cvss_score, cvss_vector = _cvss(info)
         f = finding(
             TOOL, tid, info.get("name") or tid, sev, cat, loc,
             description=(info.get("description") or "").strip(),
             evidence=evidence, remediation=(info.get("remediation") or "").strip(),
             references=[r for r in refs if r][:5], tags=tags[:10],
+            cvss_score=cvss_score, cvss_vector=cvss_vector,
         )
         findings[f.id] = f
     return list(findings.values())
@@ -100,7 +118,7 @@ def parse(stdout: str) -> list:
 async def run(ctx: ToolContext) -> ToolOutput:
     if not ctx.bin:
         raise ToolNotInstalled("nuclei not found (go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && nuclei -update-templates)")
-    res = await run_cmd(build_argv(ctx), timeout=ctx.opts["timeout"] - 2, env={"HOME": os.environ.get("HOME", "/root")})
+    res = await run_cmd(build_argv(ctx), timeout=proc_timeout(ctx), env={"HOME": os.environ.get("HOME", "/root")})
     save_raw(ctx, "nuclei.jsonl", res.stdout)
     if res.stderr:
         save_raw(ctx, "nuclei.stderr.txt", res.stderr)

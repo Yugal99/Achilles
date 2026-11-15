@@ -7,7 +7,7 @@ import asyncio
 from .models import Stack
 from .tools.base import ToolContext, ToolOutput, ToolSkipped, finding
 
-DELAYS = {"httpx": 2, "jscheck": 4, "nmap": 6, "testssl": 8, "nuclei": 10}
+DELAYS = {"httpx": 2, "jscheck": 4, "nmap": 6, "testssl": 8, "nuclei": 10, "trufflehog": 5, "retire": 3, "arjun": 7}
 
 
 async def run(tool: str, ctx: ToolContext) -> ToolOutput:
@@ -64,9 +64,34 @@ async def run(tool: str, ctx: ToolContext) -> ToolOutput:
                     evidence="SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, OPENAI_API_KEY",
                     description="Your .env usually holds database passwords and API keys.",
                     remediation="Remove .env from the deployed folder and rotate every secret in it.",
-                    tags=["exposure", "config", "env"]),
+                    tags=["exposure", "config", "env"],
+                    cvss_score=8.3, cvss_vector="CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:C/C:L/I:L/A:L"),
             finding("nuclei", "git-config", "Git config exposed", "high", "exposed_file", f"{base}/.git/config",
                     evidence="[core]", description="Source code and history can be downloaded.",
-                    remediation="Block /.git or stop deploying it.", tags=["exposure", "git"]),
+                    remediation="Block /.git or stop deploying it.", tags=["exposure", "git"],
+                    cvss_score=5.3, cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"),
+        ])
+    if tool == "trufflehog":
+        return ToolOutput(command="fake:trufflehog", message="scanned 7 files, 1 live secrets", findings=[
+            finding("trufflehog", "verified-openai", "Live OpenAI credential in client code", "critical",
+                    "exposed_secret", f"{base}/assets/index-4f2a9c1b.js", evidence="sk-pro…a1b2 (verified live)",
+                    description="TruffleHog tested this OpenAI credential and it WORKS.",
+                    remediation="Revoke and rotate it, then call OpenAI from a server function.",
+                    tags=["secret", "verified", "openai"]),
+        ])
+    if tool == "retire":
+        return ToolOutput(command="fake:retire", message="scanned 7 files, 1 vulnerable libraries", findings=[
+            finding("retire", "jquery-3.4.1-CVE-2020-11022", "Vulnerable jquery 3.4.1", "medium", "vulnerability",
+                    f"{base}/assets/vendor.js", evidence="jquery 3.4.1 (fixed in 3.5.0)",
+                    description="Passing untrusted HTML to jQuery DOM methods can run attacker scripts.",
+                    remediation="Upgrade jquery to 3.5.0 or later and rebuild.", tags=["retire", "jquery"]),
+        ])
+    if tool == "arjun":
+        return ToolOutput(command="fake:arjun", message="probed 3 endpoints, 1 with hidden parameters", findings=[
+            finding("arjun", "hidden-sensitive-param", "Hidden parameter with a sensitive name", "medium", "misconfig",
+                    f"{base}/api/users", evidence="sensitive: debug, admin; all: debug, admin, page",
+                    description="The endpoint reacts to an undocumented debug/admin-looking parameter.",
+                    remediation="Remove debug/admin flags from production and enforce authorization server-side.",
+                    tags=["arjun", "params"]),
         ])
     raise ValueError(tool)

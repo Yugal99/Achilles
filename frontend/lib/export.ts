@@ -1,6 +1,6 @@
 // Exportable report: Markdown, JSON and a self-contained print-friendly HTML page (Save as PDF).
 import type { Finding, Severity } from './achilles-data'
-import { severityMeta } from './achilles-data'
+import { cvssLabel, severityMeta } from './achilles-data'
 import type { ScanResult } from './scan-types'
 import { securityScoreOf, verdictOf } from './fixes'
 
@@ -38,6 +38,7 @@ export function toMarkdown(scan: ScanResult, findings: Finding[]): string {
       out.push(
         `### ${f.title}`,
         `- Where: \`${f.location}\``,
+        ...(cvssLabel(f.raw) ? [`- ${cvssLabel(f.raw)}`] : []),
         `- What's wrong: ${f.summary}`,
         `- Why it matters: ${f.impact}`,
         '',
@@ -62,7 +63,7 @@ export function toHtml(scan: ScanResult, findings: Finding[]): string {
     return `<h2 style="color:${color[sev]}">${severityMeta[sev].label} <small>(${list.length})</small></h2>${list
       .map(
         (f) => `<article><h3>${esc(f.title)}</h3>
-<p class="loc">${esc(f.location)}</p>
+<p class="loc">${esc(f.location)}${cvssLabel(f.raw) ? `<br>${esc(cvssLabel(f.raw)!)}` : ''}</p>
 <p><b>What’s wrong.</b> ${esc(f.summary)}</p>
 <p><b>Why it matters.</b> ${esc(f.impact)}</p>
 <p class="prompt"><b>Fix prompt</b><br>${esc(f.fixPrompt)}</p></article>`,

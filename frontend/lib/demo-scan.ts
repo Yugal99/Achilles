@@ -31,6 +31,9 @@ export const demoScan: ScanResult = {
     nuclei: { status: 'ok', duration_s: 48.7, timeout_s: 100, findings_count: 2, message: '2 template matches' },
     testssl: { status: 'ok', duration_s: 34.9, timeout_s: 100, findings_count: 0, message: 'TLS 1.2/1.3 only, certificate valid' },
     jscheck: { status: 'ok', duration_s: 9.8, timeout_s: 60, findings_count: 4, message: 'checked 9 scripts, 1 secret' },
+    trufflehog: { status: 'ok', duration_s: 12.6, timeout_s: 40, findings_count: 0, message: 'scanned 9 files, no live secrets confirmed' },
+    retire: { status: 'ok', duration_s: 7.3, timeout_s: 40, findings_count: 0, message: 'scanned 9 files, no vulnerable libraries' },
+    arjun: { status: 'ok', duration_s: 41.2, timeout_s: 100, findings_count: 0, message: 'probed 3 endpoints, no hidden parameters' },
   },
   stack: {
     technologies: ['Next.js', 'React', 'Supabase', 'Vercel'],

@@ -112,9 +112,12 @@ When not found yet: `"verified": false, "method": null` and a hint in `message` 
   "target": { "input": "https://myapp.example.com", "url": "https://myapp.example.com/", "scheme": "https",
               "host": "myapp.example.com", "port": 443, "ips": ["203.0.113.5"] },
   "queue_position": 1,
+  "joined": false,
   "links": { "status": "/api/v1/scans/scn_b9b67716f314", "results": "/api/v1/scans/scn_b9b67716f314/results" }
 }
 ```
+
+If a scan of the same URL with the same profile is already queued or running, no new scan is created. The response carries that scan's `scan_id` and `"joined": true`, so a client that asks twice follows one scan.
 
 ### `GET /api/v1/scans/{scan_id}`: status for polling
 
@@ -193,7 +196,7 @@ Lists and downloads raw tool output (`nmap.xml`, `nuclei.jsonl`, `httpx.jsonl`, 
 | Call | Auth | Returns |
 | --- | --- | --- |
 | `GET /api/v1/health` | no | `ok`, whether each tool is installed, fake mode, queue length |
-| `GET /api/v1/profiles` | yes | Profiles with descriptions, deadlines, per-tool timeouts |
+| `GET /api/v1/profiles` | yes | Profiles with descriptions, deadlines, per-tool timeouts. `0` means no limit (the `deep` profile) |
 | `GET /api/v1/schema` | no | JSON Schema of `ScanResult` (same as [scan-result.schema.json](scan-result.schema.json)) |
 
 ---

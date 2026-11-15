@@ -30,6 +30,9 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T
 }
 
+/** Scan profiles the UI offers (see backend-a/app/profiles.py). `deep` runs every tool with no time limit. */
+export type ScanProfile = 'demo' | 'deep'
+
 const post = (path: string, data: unknown) => call(path, { method: 'POST', body: JSON.stringify(data) })
 
 export const api = {
@@ -37,8 +40,8 @@ export const api = {
   challenge: (target: string) => post('ownership/challenge', { target }) as Promise<OwnershipChallenge>,
   verify: (target: string) => post('ownership/verify', { target }) as Promise<OwnershipVerify>,
   ownership: (host: string) => call<{ host: string; verified: boolean; lab_target: boolean }>(`ownership/${encodeURIComponent(host)}`),
-  startScan: (target: string, profile = 'demo') =>
-    post('scans', { target, profile }) as Promise<{ scan_id: string; status: string }>,
+  startScan: (target: string, profile: ScanProfile = 'demo') =>
+    post('scans', { target, profile }) as Promise<{ scan_id: string; status: string; joined?: boolean }>,
   status: (id: string) => call<ScanStatusView>(`scans/${id}`),
   /** Earlier scans of a verified host, newest first (persisted in MongoDB when the scanner has it configured). */
   hostScans: (host: string) => call<ScanStatusView[]>(`hosts/${encodeURIComponent(host)}/scans`),
