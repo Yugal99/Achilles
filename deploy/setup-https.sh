@@ -104,8 +104,14 @@ echo "  app answers on $UPSTREAM"
 mkdir -p "$WEBROOT/.well-known/acme-challenge" /etc/nginx/snippets
 [ -f "$HSTS_SNIPPET" ] || echo '# HSTS off until HTTPS is verified (setup-https.sh <domain> --enable-hsts)' > "$HSTS_SNIPPET"
 rm -f /etc/nginx/sites-enabled/default
-# Hide the nginx version in error pages/headers.
-echo 'server_tokens off;' > /etc/nginx/conf.d/achilles-hardening.conf
+# Hide the nginx version in error pages/headers. Ubuntu's nginx.conf may already set server_tokens
+# (26.10 ships "server_tokens build;"), and a second directive is a fatal duplicate, so edit it in place.
+rm -f /etc/nginx/conf.d/achilles-hardening.conf
+if grep -qE '^\s*server_tokens\s' /etc/nginx/nginx.conf; then
+  sed -i -E 's/^(\s*)server_tokens\s+[^;]*;/\1server_tokens off;/' /etc/nginx/nginx.conf
+else
+  echo 'server_tokens off;' > /etc/nginx/conf.d/achilles-hardening.conf
+fi
 
 install_site() {  # file -> validate and reload, or restore the previous site
   local new=$1

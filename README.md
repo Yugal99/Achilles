@@ -7,7 +7,7 @@ Achilles is a security recon tool for vibe-coded apps. Paste in the URL of an ap
 It then gives you a slide-style report: what it found, why each finding matters, and a fix prompt you can paste
 straight back into your AI builder.
 
-Built for **HackUTA 2026**. Live at **[cyberachilles.surf](http://cyberachilles.surf)**.
+Built for **HackUTA 2026**. Live at **[cyberachilles.surf](https://cyberachilles.surf)**.
 
 ---
 
