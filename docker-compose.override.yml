@@ -1,0 +1,6 @@
+# Local development only (merged automatically by `docker compose`; not copied to the server).
+services:
+  backend:
+    build: ./backend-a
+  frontend:
+    build: ./frontend

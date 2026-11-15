@@ -56,18 +56,25 @@ Isolated crew: one container per tool per scan, running as non-root with a read-
 AI fallback chain: Grok, then Gemini or Claude, then rule-based tips.
 Tested against known-vulnerable targets: OWASP Juice Shop, plus a seeded test app with a leaked key and an exposed .env.
 Getting started
-Prerequisites: Docker and Docker Compose, a Kali Linux host (we use a Vultr VM), and API keys for Grok (optionally Gemini or Claude).
+Prerequisites: Docker and Docker Compose. The backend image already contains Nmap, httpx, Nuclei and testssl.sh, so it runs on any OS.
 
 git clone https://github.com/yugal99/achilles.git
 cd achilles
-cp .env.example .env        # add your API keys and database settings
-docker compose up --build
+cp .env.example .env        # set DOCKERHUB_USER, ACHILLES_API_KEY, and optionally the Mongo URI and AI keys
+docker compose pull         # newest images from Docker Hub (or: docker compose up -d --build to build locally)
+docker compose up -d
 Then open http://localhost:3000, enter the URL of an app you own, and follow the ownership-check steps.
 
-To run the tests:
+Images and CI/CD
+Two images on Docker Hub: <user>/achilles-backend and <user>/achilles-frontend.
+On every push, GitHub Actions (.github/workflows/docker.yml) runs the backend tests, builds both images and pushes them tagged sha-<commit> and <branch>. Pushes to main also update :latest. Pull requests build and test without pushing.
+Repo secrets needed (Settings > Secrets and variables > Actions): DOCKERHUB_USERNAME, and DOCKERHUB_TOKEN (a Docker Hub personal access token with Read & Write).
+Runtime keys (Mongo URI, AI keys, API key) go only in the server's .env, never in GitHub or the images.
 
-docker compose -f docker-compose.test.yml up --abort-on-container-exit
-(Update these commands to match the final repo layout.)
+To run the tests without Docker:
+
+cd backend-a && python -m pytest -q
+cd frontend && pnpm build
 
 Ethics and responsible use
 Achilles only scans targets you have proven you control, and it never exploits what it finds. There is no brute force, no payloads and no writes to the target. Private, loopback and cloud-metadata addresses are blocked. Leaked secrets are masked in reports, and raw scan output is deleted after 7 days.

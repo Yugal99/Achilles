@@ -65,6 +65,13 @@ pnpm dev                     # add -p 3001 if 3000 is taken
 
 If ports 3000 and 8000 are taken (e.g. by another local project), run the backend on another port and point `ACHILLES_API_URL` in `frontend/.env.local` at it.
 
+## Docker and CI/CD
+
+- `backend-a/Dockerfile` bakes in nmap, testssl.sh and pinned, checksum-verified httpx and nuclei (bump `HTTPX_VERSION`/`NUCLEI_VERSION` there). It sets `ACHILLES_NUCLEI_TEMPLATES_DIR=/nonexistent` so only `templates/achilles` runs; keep that.
+- `frontend/Dockerfile` builds the Next.js standalone output (`output: 'standalone'` in `next.config.mjs`). API URL and key are runtime env, never build args.
+- `docker-compose.yml` at the root runs both, reading the root `.env` (copy `.env.example`). Only the frontend port is published.
+- `.github/workflows/docker.yml`: on push, pytest, then build and push `<DOCKERHUB_USERNAME>/achilles-backend` and `achilles-frontend` (`sha-*`, branch, and `latest` on main). PRs build only. Needs repo secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
+
 ## Tests and checks
 
 ```bash

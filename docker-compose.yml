@@ -1,0 +1,30 @@
+# Production stack: runs the images from Docker Hub. This is the file CI copies to the server.
+#   cp .env.example .env   (fill it in)   then   docker compose up -d
+# Newest images:  docker compose pull && docker compose up -d
+# Locally, docker-compose.override.yml is merged in automatically and adds `build:`,
+# so `docker compose up -d --build` builds from source instead.
+services:
+  backend:
+    image: ${DOCKERHUB_USER:-achilles}/achilles-backend:${ACHILLES_TAG:-latest}
+    env_file: .env
+    environment:
+      ACHILLES_DATA_DIR: /data
+    volumes:
+      - achilles-data:/data
+    restart: unless-stopped
+    # Not published to the host: only the frontend proxy talks to it.
+
+  frontend:
+    image: ${DOCKERHUB_USER:-achilles}/achilles-frontend:${ACHILLES_TAG:-latest}
+    environment:
+      ACHILLES_API_URL: http://backend:8000/api/v1
+      ACHILLES_API_KEY: ${ACHILLES_API_KEY:-}
+    ports:
+      - "${ACHILLES_WEB_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  achilles-data:
